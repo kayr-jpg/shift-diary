@@ -55,7 +55,7 @@ jobs:
           curl --fail --silent --show-error http://localhost:8787/api/health
           trips=$(curl --fail --silent --show-error "http://localhost:8787/api/trips?date=2026-10-01")
           echo "$trips"
-          grep -q '"tripCount":2' <<< "$trips"
+          jq -e '.summary | .tripCount==2 and .revenue==3900 and .commission==585 and .net==3315 and .cash==1500 and .card==2400' <<< "$trips"
           page=$(curl --fail --silent --show-error http://localhost:8787/)
           grep -qi '<!doctype html' <<< "$page"
       - if: failure()

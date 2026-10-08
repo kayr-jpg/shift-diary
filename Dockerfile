@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
-ARG NODE_IMAGE=node:22.12-bookworm-slim
+ARG NODE_IMAGE=node:22.22-bookworm-slim
 
 # ---- base: node + pinned pnpm (matches root package.json packageManager) ----
 FROM ${NODE_IMAGE} AS base
-RUN corepack enable && corepack prepare pnpm@12.10.1 --activate
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@12.10.1 --activate
 WORKDIR /app
 
 # ---- manifests: only what pnpm needs to resolve the workspace (layer cache) ----
@@ -16,10 +16,7 @@ COPY e2e/package.json e2e/
 
 # ---- build: full install (dev deps incl.) and build the web bundle ----
 FROM manifests AS build
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && rm -rf /var/lib/apt/lists/*
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY packages/core packages/core
 COPY apps/web apps/web
@@ -28,10 +25,7 @@ RUN pnpm --filter @shift/web build
 
 # ---- prod-deps: production dependencies of @shift/api only (native better-sqlite3 built here) ----
 FROM manifests AS prod-deps
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && rm -rf /var/lib/apt/lists/*
-RUN pnpm install --frozen-lockfile --prod --filter "@shift/api..."
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --prod --filter "@shift/api..."
 
 # ---- runtime ----
 FROM ${NODE_IMAGE} AS runtime
