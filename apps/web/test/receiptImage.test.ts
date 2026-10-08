@@ -23,6 +23,7 @@ beforeEach(async () => {
   await act(() => i18n.changeLanguage("ru"));
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -56,11 +57,17 @@ describe("receiptLines", () => {
 
 function fakeCanvas(blob: Blob | null) {
   const drawn: string[] = [];
+  const calls: { text: string; x: number; align: string }[] = [];
   const noop = () => {};
   const ctx = {
     scale: noop, fillRect: noop, save: noop, restore: noop, setLineDash: noop,
     beginPath: noop, moveTo: noop, lineTo: noop, stroke: noop,
-    fillText: (text: string) => drawn.push(text),
+    textAlign: "left",
+    measureText: (text: string) => ({ width: text.length * 7 }),
+    fillText(text: string, x: number) {
+      drawn.push(text);
+      calls.push({ text, x, align: this.textAlign });
+    },
   };
   const canvas = {
     width: 0,
@@ -68,7 +75,7 @@ function fakeCanvas(blob: Blob | null) {
     getContext: () => ctx,
     toBlob: (cb: BlobCallback) => cb(blob),
   } as unknown as CanvasLike;
-  return { canvas, drawn };
+  return { canvas, drawn, calls };
 }
 
 describe("renderReceiptPng", () => {
@@ -83,6 +90,20 @@ describe("renderReceiptPng", () => {
     }
     expect(drawn).toContain(receiptDate(DAY.date, "ru"));
     expect(canvas.width).toBe(720);
+  });
+
+  it("ellipsizes a very long label so it cannot overlap its value", async () => {
+    i18n.addResource("ru", "translation", "receipt.trips", "Очень длинное название строки ".repeat(4));
+    try {
+      const { canvas, calls } = fakeCanvas(new Blob(["x"]));
+      await renderReceiptPng(DAY, "ru", () => canvas);
+      const value = calls.find((c) => c.text === "2")!;
+      const label = calls.find((c) => c.text.startsWith("Очень"))!;
+      expect(label.text.endsWith("…")).toBe(true);
+      expect(label.x + label.text.length * 7).toBeLessThan(value.x - value.text.length * 7);
+    } finally {
+      i18n.addResource("ru", "translation", "receipt.trips", "Поездок");
+    }
   });
 
   it("rejects when toBlob yields null", async () => {
@@ -110,7 +131,8 @@ describe("shareReceipt", () => {
     await expect(shareReceipt(blob, "a.png")).rejects.toThrow("boom");
   });
 
-  it("falls back to an anchor download otherwise", async () => {
+  it("falls back to an anchor download otherwise, revoking the URL only after a delay", async () => {
+    vi.useFakeTimers();
     vi.stubGlobal("navigator", {});
     const create = vi.fn(() => "blob:fake");
     const revoke = vi.fn();
@@ -123,6 +145,13 @@ describe("shareReceipt", () => {
     expect(await shareReceipt(blob, "shift-2026-10-01.png")).toBe("downloaded");
     expect(clicked[0]!.getAttribute("download")).toBe("shift-2026-10-01.png");
     expect(clicked[0]!.href).toBe("blob:fake");
+    expect(revoke).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
     expect(revoke).toHaveBeenCalledWith("blob:fake");
+    vi.useRealTimers();
+  });
+
+  it("receiptDate does not throw on an invalid date", () => {
+    expect(receiptDate("not-a-date", "ru")).toBe("not-a-date");
   });
 });

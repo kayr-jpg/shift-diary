@@ -95,9 +95,10 @@ function ReceiptDialog({
         <div className="rounded-sm bg-white p-6 font-mono text-zinc-900 shadow-2xl">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 text-center">
-              <h2 id="receipt-title" className="text-xl font-bold">
-                {t("app.title")}
+              <h2 id="receipt-title" className="sr-only">
+                {t("receipt.title")}
               </h2>
+              <p className="text-xl font-bold">{t("app.title")}</p>
               <p className="mt-1 text-sm text-zinc-600">{receiptDate(day.date, lang)}</p>
             </div>
             <button

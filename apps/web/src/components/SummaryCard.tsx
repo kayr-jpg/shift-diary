@@ -43,10 +43,14 @@ export function SummaryCard({
   summary,
   onCloseShift,
   closeShiftRef,
+  onPreload,
+  busy,
 }: {
   summary: Summary;
   onCloseShift?: () => void;
   closeShiftRef?: Ref<HTMLButtonElement>;
+  onPreload?: () => void;
+  busy?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -86,6 +90,9 @@ export function SummaryCard({
           ref={closeShiftRef}
           type="button"
           onClick={onCloseShift}
+          onPointerDown={onPreload}
+          onFocus={onPreload}
+          aria-busy={busy || undefined}
           className="mt-5 min-h-12 w-full rounded-full bg-zinc-900 px-6 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
           {t("receipt.closeShift")}

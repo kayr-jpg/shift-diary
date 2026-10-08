@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useEffect, useMemo, useState } from "react";
+import { useCallback, useRef, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, NetworkError, type DayCount } from "./api";
 import { useDay, useDays } from "./hooks";
@@ -9,6 +9,7 @@ import { TripList } from "./components/TripList";
 import { LangToggle } from "./components/LangToggle";
 import { Toasts } from "./components/Toasts";
 import { AddTripSheet } from "./components/AddTripSheet";
+import { LazyReceipt, preloadReceipt } from "./components/LazyReceipt";
 import { UnderTheHood } from "./components/UnderTheHood";
 import { ChevronLeft, ChevronRight } from "./components/Icons";
 
@@ -63,6 +64,14 @@ function DayView({ date }: { date: string }) {
   const day = useDay(date);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const closeShiftRef = useRef<HTMLButtonElement>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const hasTrips = (day.data?.summary.tripCount ?? 0) > 0;
+  // Warm the Receipt chunk when idle so the first tap opens instantly.
+  useEffect(() => {
+    if (!hasTrips) return;
+    const id = window.setTimeout(preloadReceipt, 1500);
+    return () => window.clearTimeout(id);
+  }, [hasTrips]);
   if (day.isPending) return <Skeleton />;
   if (day.isError) {
     return (
@@ -85,19 +94,16 @@ function DayView({ date }: { date: string }) {
         summary={day.data.summary}
         onCloseShift={() => setReceiptOpen(true)}
         closeShiftRef={closeShiftRef}
+        onPreload={preloadReceipt}
+        busy={receiptBusy}
       />
       <TripList trips={day.data.trips} />
       {receiptOpen && (
-        <Suspense fallback={null}>
-          <Receipt day={day.data} open onClose={() => setReceiptOpen(false)} openerRef={closeShiftRef} />
-        </Suspense>
+        <LazyReceipt day={day.data} onClose={() => setReceiptOpen(false)} openerRef={closeShiftRef} onBusy={setReceiptBusy} />
       )}
     </div>
   );
 }
-
-// Receipt pulls in Motion; load it only when a shift is closed.
-const Receipt = lazy(() => import("./components/Receipt").then((m) => ({ default: m.Receipt })));
 
 const arrowClass =
   "grid size-12 place-items-center rounded-full bg-white ring-1 ring-zinc-200 hover:bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:bg-zinc-800";

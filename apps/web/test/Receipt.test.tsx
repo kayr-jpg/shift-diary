@@ -4,6 +4,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import App from "../src/App";
 import { Receipt } from "../src/components/Receipt";
+import { LazyReceipt } from "../src/components/LazyReceipt";
+import { Toasts } from "../src/components/Toasts";
+import { lazyWithRetry } from "../src/lib/lazyWithRetry";
 import { createQueryClient } from "../src/queryClient";
 import i18n from "../src/i18n";
 import ru from "../src/locales/ru.json";
@@ -138,5 +141,35 @@ describe("Close shift in the app", () => {
     renderApp("#2026-10-02", EMPTY);
     await screen.findByTestId("net");
     expect(screen.queryByRole("button", { name: ru.receipt.closeShift })).toBeNull();
+  });
+});
+
+describe("LazyReceipt loading", () => {
+  it("toasts and recovers when the chunk fails once, and opens on the next try", async () => {
+    mockMotion(true);
+    let attempts = 0;
+    const source = lazyWithRetry<React.ComponentProps<typeof Receipt>>(() => {
+      attempts += 1;
+      return attempts === 1 ? Promise.reject(new Error("chunk")) : Promise.resolve({ default: Receipt });
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>go</button>
+          {open && <LazyReceipt source={source} day={DAY} onClose={() => setOpen(false)} />}
+          <Toasts />
+        </>
+      );
+    }
+    render(<Host />);
+    fireEvent.click(screen.getByRole("button", { name: "go" }));
+    expect(await screen.findByText(ru.receipt.loadFailed)).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "go" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "go" }));
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(attempts).toBe(2);
   });
 });

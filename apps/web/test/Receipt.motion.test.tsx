@@ -30,7 +30,7 @@ afterEach(() => {
 describe("Receipt without reduced motion", () => {
   it("renders the header date, every line, the footer and the share button; closed renders nothing", async () => {
     const { rerender } = render(<Receipt day={DAY} open onClose={() => {}} />);
-    expect(screen.getByRole("dialog", { name: ru.app.title })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: ru.receipt.title })).toBeTruthy();
     expect(screen.getByText(receiptDate(DAY.date, "ru"))).toBeTruthy();
     for (const l of receiptLines(DAY, "ru")) {
       expect(await screen.findByText(l.label)).toBeTruthy();

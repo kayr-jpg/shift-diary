@@ -146,6 +146,7 @@
     "card": "Card",
     "thanks": "Thanks for the shift!",
     "shareFailed": "Could not share the receipt",
-    "downloaded": "Receipt saved as an image"
+    "downloaded": "Receipt saved as an image",
+    "loadFailed": "Could not open the receipt. Try again"
   }
 }
