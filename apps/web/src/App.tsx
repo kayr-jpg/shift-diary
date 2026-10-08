@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useRef, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, NetworkError, type DayCount } from "./api";
 import { useDay, useDays } from "./hooks";
@@ -93,6 +93,7 @@ export default function App() {
   const days = useDays();
   const today = todayKz();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const date = hashDate ?? (days.isSuccess ? pickInitialDate(days.data, today) : days.isError ? today : null);
 
@@ -150,13 +151,14 @@ export default function App() {
       {date !== null && (
         <>
           <button
+            ref={addButtonRef}
             type="button"
             onClick={() => setSheetOpen(true)}
             className="fixed bottom-5 right-4 z-30 min-h-14 rounded-full bg-emerald-700 px-7 text-lg font-bold text-white shadow-lg hover:bg-emerald-800 active:bg-emerald-900"
           >
             {t("form.open")}
           </button>
-          <AddTripSheet open={sheetOpen} date={date} onClose={() => setSheetOpen(false)} />
+          <AddTripSheet open={sheetOpen} date={date} openerRef={addButtonRef} onClose={() => setSheetOpen(false)} />
         </>
       )}
       <Toasts />

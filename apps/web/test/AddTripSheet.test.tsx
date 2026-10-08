@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "../src/App";
 import { AddTripSheet } from "../src/components/AddTripSheet";
@@ -61,14 +61,15 @@ afterEach(() => {
 
 function Host() {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   useDay(DATE);
   useDays();
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)}>
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)}>
         trigger
       </button>
-      <AddTripSheet open={open} date={DATE} onClose={() => setOpen(false)} />
+      <AddTripSheet open={open} date={DATE} openerRef={triggerRef} onClose={() => setOpen(false)} />
       <Toasts />
     </>
   );
@@ -201,6 +202,16 @@ describe("AddTripSheet", () => {
     await waitFor(() => expect((screen.getByRole("button", { name: ru.form.submit }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
     expect(await screen.findByText(ru.errors.INTERNAL)).toBeTruthy();
+  });
+
+  it("shows a 422 for a field without an input (id) as a form-level alert and stays open", async () => {
+    postHandler = () => json({ errors: [{ field: "id", code: "ID_INVALID" }] }, 422);
+    const { user } = await openSheet();
+    times("09:00", "09:30");
+    await user.type(field(ru.form.amount), "1000");
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+    expect(await within(await screen.findByRole("alert")).findByText(ru.errors.ID_INVALID)).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("keeps the sheet open on network failure; Retry reuses the id and a replay toasts", async () => {

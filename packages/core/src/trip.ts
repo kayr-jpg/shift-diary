@@ -53,7 +53,8 @@ const baseShape = {
 };
 
 // Unknown keys are ignored (stripped), not rejected: FieldError has no code for them.
-const crossFieldCheck = z.superRefine((trip: Partial<Record<keyof Trip, unknown>>, ctx) => {
+const crossFieldCheck = z.superRefine(
+  (trip: Partial<Record<keyof Trip, unknown>>, ctx) => {
     const start = typeof trip.start === "string" ? parseIsoInstant(trip.start) : null;
     const end = typeof trip.end === "string" ? parseIsoInstant(trip.end) : null;
     if (start !== null && end !== null) {
@@ -69,9 +70,10 @@ const crossFieldCheck = z.superRefine((trip: Partial<Record<keyof Trip, unknown>
     if (amountOk && commissionOk && commission > amount) {
       ctx.addIssue({ code: "custom", path: ["commission"], message: "COMMISSION_INVALID" });
     }
-});
-// Zod skips checks once an earlier issue exists; `when` makes the cross-field checks run even if an unrelated field failed.
-crossFieldCheck._zod.def.when = () => true;
+  },
+  // Zod skips checks once an earlier issue exists; `when` makes the cross-field checks run even if an unrelated field failed.
+  { when: () => true },
+);
 
 export const TripSchema = z.object(baseShape).check(crossFieldCheck);
 

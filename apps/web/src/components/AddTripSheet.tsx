@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { validateTrip, type FieldError, type Trip } from "@shift/core";
@@ -12,6 +12,7 @@ type FieldErrors = Partial<Record<Field, string>>;
 type Payment = Trip["payment"];
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+const SLOT_FIELDS: readonly Field[] = ["start", "end", "amount", "commission", "payment"];
 const COMMISSION_RATE = 0.15;
 
 /** `t_` + base36 timestamp + `_` + 6 random chars: matches [A-Za-z0-9_-]{1,64}. */
@@ -58,16 +59,15 @@ function FieldBox({
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
-function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
+function Sheet({ date, onClose, openerRef }: { date: string; onClose: () => void; openerRef?: RefObject<HTMLElement | null> }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const uid = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLInputElement>(null);
   // Mounted once per open: the id, and so every retry, is stable until the sheet closes.
-  const idRef = useRef<string>(generateTripId());
-  const triggerRef = useRef<Element | null>(document.activeElement);
-
+  const [tripId] = useState(generateTripId);
+  
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [amount, setAmount] = useState("");
@@ -89,12 +89,13 @@ function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
   };
 
   useEffect(() => {
+    // Prefer the explicit opener: Safari/iOS don't focus a button on click, so activeElement can be <body>.
+    const trigger = openerRef?.current ?? document.activeElement;
     startRef.current?.focus();
-    const trigger = triggerRef.current;
     return () => {
       if (trigger instanceof HTMLElement) trigger.focus();
     };
-  }, []);
+  }, [openerRef]);
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -106,7 +107,7 @@ function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
 
   const amountNum = amount === "" ? undefined : Number(amount);
   const payload = {
-    id: idRef.current,
+    id: tripId,
     start: toIso(date, start),
     end: toIso(date, end),
     amount: amountNum,
@@ -114,14 +115,8 @@ function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
     payment,
   };
   const clientErrors: FieldErrors = {};
-  const collect = (input: unknown, fields: readonly Field[]) => {
-    const r = validateTrip(input);
-    if (!r.ok) for (const e of r.errors) if (fields.includes(e.field)) clientErrors[e.field] ??= e.code;
-  };
-  collect(payload, ["id", "amount", "commission", "payment"]);
-  // The shared schema skips its cross-field time checks while any other field is invalid,
-  // so judge the times against a known-good money part to show them live.
-  collect({ ...payload, amount: 1, commission: 0 }, ["start", "end"]);
+  const result = validateTrip(payload);
+  if (!result.ok) for (const e of result.errors) clientErrors[e.field] ??= e.code;
 
   const errorFor = (f: Field): string | undefined => {
     const code = serverErrors[f] ?? (attempted || touched[f] ? clientErrors[f] : undefined);
@@ -158,8 +153,14 @@ function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
       const errors = (res.body as { errors?: FieldError[] } | null)?.errors;
       if (res.status === 422 && Array.isArray(errors)) {
         const next: FieldErrors = {};
-        for (const e of errors) next[e.field] ??= e.code;
+        let orphan: string | null = null;
+        for (const e of errors) {
+          // Fields without an input (e.g. id) can't show inline: surface them at form level.
+          if (SLOT_FIELDS.includes(e.field)) next[e.field] ??= e.code;
+          else orphan ??= `errors.${e.code}`;
+        }
         setServerErrors(next);
+        if (orphan) setFormError(orphan);
       } else if (res.status === 409) {
         setFormError("errors.ID_CONFLICT");
       } else {
@@ -340,6 +341,17 @@ function Sheet({ date, onClose }: { date: string; onClose: () => void }) {
   );
 }
 
-export function AddTripSheet({ open, date, onClose }: { open: boolean; date: string; onClose: () => void }) {
-  return open ? <Sheet date={date} onClose={onClose} /> : null;
+export function AddTripSheet({
+  open,
+  date,
+  onClose,
+  openerRef,
+}: {
+  open: boolean;
+  date: string;
+  onClose: () => void;
+  /** The element that opened the sheet; focus returns to it on close. */
+  openerRef?: RefObject<HTMLElement | null>;
+}) {
+  return open ? <Sheet date={date} onClose={onClose} openerRef={openerRef} /> : null;
 }
