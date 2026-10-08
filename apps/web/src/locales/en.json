@@ -105,5 +105,32 @@
   "toasts": {
     "tripAdded": "Trip added",
     "replayNoDuplicate": "Sent again — no duplicate created"
+  },
+  "hood": {
+    "title": "Under the hood",
+    "intro": "Live API requests: see how the server protects against duplicates.",
+    "noTrips": "No trips on this day — add a trip first.",
+    "request": "Request",
+    "response": "Response",
+    "running": "Running…",
+    "tripsOnDay": "Trips on this day: {{before}} → {{after}}",
+    "translated": "Errors explained",
+    "repeat": {
+      "label": "Repeat last trip",
+      "desc": "Sends the same trip again. No duplicate: the server answers 200 and flags the replay."
+    },
+    "conflict": {
+      "label": "Same id, different amount",
+      "desc": "Same id but the amount is 100 higher. The server rejects it with 409 and shows the difference."
+    },
+    "invalid": {
+      "label": "Invalid trip",
+      "desc": "Deliberately bad data. The server answers 422 and lists every error at once."
+    },
+    "reset": {
+      "label": "Reset demo",
+      "confirm": "Are you sure?",
+      "desc": "Restores the demo data and discards trips you added. Click twice."
+    }
   }
 }

@@ -9,6 +9,7 @@ import { TripList } from "./components/TripList";
 import { LangToggle } from "./components/LangToggle";
 import { Toasts } from "./components/Toasts";
 import { AddTripSheet } from "./components/AddTripSheet";
+import { UnderTheHood } from "./components/UnderTheHood";
 import { ChevronLeft, ChevronRight } from "./components/Icons";
 
 /** Today if it has trips, else the latest day with trips, else today. */
@@ -102,6 +103,9 @@ export default function App() {
     if (date !== null && hashDate === null) window.history.replaceState(null, "", `#${date}`);
   }, [date, hashDate]);
 
+  const dayData = useDay(date);
+  const lastTrip = dayData.data?.trips.at(-1);
+
   const tripDays = useMemo(
     () => new Set((days.data ?? []).filter((d) => d.tripCount > 0).map((d) => d.date)),
     [days.data],
@@ -145,6 +149,7 @@ export default function App() {
               {t("nav.today")}
             </button>
             <DayView date={date} />
+            <UnderTheHood date={date} lastTrip={lastTrip} />
           </>
         )}
       </main>
