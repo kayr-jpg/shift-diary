@@ -39,7 +39,7 @@ docker compose up --build
 
 ### Вариант 3: из исходников
 
-Нужны Node.js 22+ (CI использует 22, локально проверено на 24.15) и pnpm 12.10.1 из поля `packageManager`. Его подставляет corepack:
+Нужны Node.js 22.18+ (скрипты `demo:record` и `docs:screenshots` запускают `.ts` напрямую через `node`, а type stripping включён по умолчанию с 22.18; CI использует 22, локально проверено на 24.15) и pnpm 12.10.1 из поля `packageManager`. Его подставляет corepack:
 
 ```bash
 corepack enable          # если corepack ругается на подписи: npm i -g corepack@latest
@@ -66,7 +66,7 @@ pnpm dev
 |---|---|---|---|
 | R1 | API отдаёт поездки за выбранный день и сводку: количество, выручка, комиссия, «на руки», наличные/карта | [`apps/api/src/routes/read.ts`](apps/api/src/routes/read.ts#L12-L29) (`GET /api/trips?date=`), [`packages/core/src/summary.ts`](packages/core/src/summary.ts#L13-L27) (`summarize`), [`packages/core/src/time.ts`](packages/core/src/time.ts#L23-L29) (границы дня) | [`apps/api/test/get-trips.test.ts`](apps/api/test/get-trips.test.ts#L7): «2026-10-01 → exact brief summary, trips sorted by start»; «empty day → zero summary and no trips»; «midnight-crossing trip appears on its start day only» |
 | R2 | Клиент показывает сводку и список поездок, умеет переключать дни | [`apps/web/src/App.tsx`](apps/web/src/App.tsx), [`SummaryCard.tsx`](apps/web/src/components/SummaryCard.tsx), [`TripList.tsx`](apps/web/src/components/TripList.tsx), [`DayStrip.tsx`](apps/web/src/components/DayStrip.tsx), [`DaySwipe.tsx`](apps/web/src/components/DaySwipe.tsx) | [`apps/web/test/App.test.tsx`](apps/web/test/App.test.tsx#L93): «opens the latest day with trips and shows the brief's summary and trips», «next-day arrow requests the next date…»; e2e в реальном браузере, [`e2e/tests/main-flow.spec.ts`](e2e/tests/main-flow.spec.ts): «arrows switch to the next day and back», «date strip selects a day» |
-| R3 | Добавление поездки через API с валидацией (сумма > 0, конец > начала); повторная отправка той же поездки не создаёт дубль | [`apps/api/src/routes/trips.ts`](apps/api/src/routes/trips.ts#L35-L63) (`POST /api/trips`), [`packages/core/src/trip.ts`](packages/core/src/trip.ts#L56-L100) (общая Zod-схема для сервера и клиента), `insertIfAbsent` в [`repo.sqlite.ts`](apps/api/src/repo.sqlite.ts#L41-L56) / [`repo.d1.ts`](apps/api/src/repo.d1.ts#L40-L55) | [`apps/api/test/post-trips.test.ts`](apps/api/test/post-trips.test.ts#L13-L80): 201 → 200 replay → 409; [валидация 422](apps/api/test/post-trips.test.ts#L82-L122): 17 случаев, включая «end before start», «amount zero»; [«20 concurrent identical POSTs → exactly one 201, nineteen 200, one row»](apps/api/test/post-trips.test.ts#L223) |
+| R3 | Добавление поездки через API с валидацией (сумма > 0, конец > начала); повторная отправка той же поездки не создаёт дубль | [`apps/api/src/routes/trips.ts`](apps/api/src/routes/trips.ts#L35-L65) (`POST /api/trips`), [`packages/core/src/trip.ts`](packages/core/src/trip.ts#L56-L100) (общая Zod-схема для сервера и клиента), `insertIfAbsent` в [`repo.sqlite.ts`](apps/api/src/repo.sqlite.ts#L44-L59) / [`repo.d1.ts`](apps/api/src/repo.d1.ts#L44-L59) | [`apps/api/test/post-trips.test.ts`](apps/api/test/post-trips.test.ts#L13-L80): 201 → 200 replay → 409; [валидация 422](apps/api/test/post-trips.test.ts#L82-L122): 17 случаев, включая «end before start», «amount zero»; [«20 concurrent identical POSTs → exactly one 201, nineteen 200, one row»](apps/api/test/post-trips.test.ts#L223) |
 | R4 | Тесты на расчёт сводки и защиту от дублей | — | Сводка: [`packages/core/test/summary.test.ts`](packages/core/test/summary.test.ts#L10) («sums the brief example»: 3 900 / 585 / 3 315 / 1 500 / 2 400) и property-тесты [`summary.property.test.ts`](packages/core/test/summary.property.test.ts#L66) (fast-check, 300 прогонов на свойство). Дубли: [`post-trips.test.ts`](apps/api/test/post-trips.test.ts#L13), [`repo.contract.ts`](apps/api/test/repo.contract.ts#L60) (один контракт для SQLite и D1/Miniflare), e2e [`idempotency.spec.ts`](e2e/tests/idempotency.spec.ts#L81) по реальному HTTP |
 
 ---
@@ -230,12 +230,12 @@ $ curl -s "$BASE/api/health"
 |---|---|---|---|---|
 | Unit (core) | Vitest | Пример брифа, пустой день, только наличные / только карта, поездка через полночь, 02:00 по местному времени против UTC-даты, каждое правило валидации, `canonicalize`, границы дня | `packages/core/test/{summary,trip,time,canonical}.test.ts` | 79 |
 | Property (core) | fast-check, 300 прогонов на свойство | `net = revenue − commission`; `cash + card = revenue`; сумма дневных сводок = сводке всех поездок; `canonicalize` идемпотентен и не зависит от записи смещения | `packages/core/test/summary.property.test.ts` | 5 |
-| API | Vitest + Hono `app.request` + SQLite в памяти; D1 через Miniflare | 201 → 200 → 409, все 422, изоляция песочниц, reset, 413, 500 без стектрейса, **20 одновременных одинаковых POST → 1 строка**, контракт репозитория на SQLite и D1, Worker и cron | `apps/api/test/*.test.ts` (8 файлов) | 97 |
-| Web | Vitest + Testing Library (jsdom) | Главный экран, переключение дней и свайп, форма добавления, «Под капотом», чек и PNG, офлайн, i18n (совпадение ключей), формат денег, PWA-манифест | `apps/web/test/*` (12 файлов) | 83 |
-| E2E + a11y | Playwright (iPhone 14 / WebKit и Desktop Chrome) + axe-core | Переключение дней, добавление поездки, повтор/409/422 в панели, KZ/EN, чек, PWA, axe без serious/critical, тап-цели ≥ 44 px, reduced motion | `e2e/tests/*.spec.ts` | 57 passed, 3 skipped |
+| API | Vitest + Hono `app.request` + SQLite в памяти; D1 через Miniflare | 201 → 200 → 409, все 422, изоляция песочниц, reset, 413, 500 без стектрейса, JSON 404 без создания песочницы, **20 одновременных одинаковых POST → 1 строка**, контракт репозитория на SQLite и D1, Worker и cron | `apps/api/test/*.test.ts` (9 файлов) | 112 |
+| Web | Vitest + Testing Library (jsdom) | Главный экран, переключение дней и свайп, форма добавления (включая поездку через полночь), «Под капотом», чек и PNG, офлайн, i18n (совпадение ключей), формат денег, PWA-манифест | `apps/web/test/*` (12 файлов) | 88 |
+| E2E + a11y | Playwright (iPhone 14 / WebKit и Desktop Chrome) + axe-core | Переключение дней, добавление поездки (и через полночь), повтор/409/422 в панели, KZ/EN, чек, PWA, axe без serious/critical, тап-цели ≥ 44 px, reduced motion | `e2e/tests/*.spec.ts` | 59 passed, 3 skipped |
 | Smoke | Playwright против прода | Health, сводка из демо-данных, 201 → 200 → 409 по HTTP, добавление поездки в UI, статика/манифест/SW; запускается после каждого деплоя | `e2e/tests/smoke.spec.ts` | 5 |
 
-Цифры из прогона на коммите этой документации: `pnpm test` → core 84, api 97, web 83 (264, все зелёные); `pnpm e2e` → 57 passed, 3 skipped (iPhone/WebKit 27 + 3 skipped, Desktop 30). Пропущены 3 теста, которые требуют Chromium (service worker и скачивание PNG). Smoke-тесты входят в `pnpm e2e` (5 × 2 проекта). Покрытие (`vitest run --coverage`): `packages/core` — 100 % строк, 93.9 % веток; `apps/api` — 99.31 % строк, 88.5 % веток.
+Цифры из прогона после финального раунда исправлений (коммиты `e6d033e..`, см. «Как я использовал ИИ»): `pnpm test` → core 84, api 112, web 88 (284, все зелёные); `pnpm e2e` → 59 passed, 3 skipped (iPhone/WebKit 28 + 3 skipped, Desktop 31). Пропущены 3 теста, которые требуют Chromium (service worker и скачивание PNG). Smoke-тесты входят в `pnpm e2e` (5 × 2 проекта). Покрытие (`vitest run --coverage`): `packages/core` — 100 % строк, 93.9 % веток; `apps/api` — 99.34 % строк, 89.41 % веток.
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm test       # типы, ESLint, unit + property + API + web
@@ -246,7 +246,7 @@ BASE_URL=https://shift-diary.<your-subdomain>.workers.dev pnpm smoke   # smoke �
 pnpm --filter @shift/core exec vitest run --coverage                  # покрытие (так же для @shift/api)
 ```
 
-CI (`.github/workflows/ci.yml`, на каждый PR): установка → typecheck → lint → test → build, затем e2e и сборка Docker-образа со smoke-проверкой контейнера.
+CI (`.github/workflows/ci.yml`, на каждый PR и push в `main`): установка → typecheck → lint → test → build, затем e2e и сборка Docker-образа со smoke-проверкой контейнера.
 
 ---
 
@@ -263,8 +263,9 @@ CI (`.github/workflows/ci.yml`, на каждый PR): установка → ty
 
 **Что получилось в цифрах** (из `git log` и ledger):
 
-- 26 коммитов до этой документации; 7 из них — `fix(...)`, и каждый закрывает находку ревью или упавшего теста.
-- Раунды исправлений после ревью понадобились в 6 задачах из 16 (6, 9, 11, 12, 14, 16).
+- От коммита спеки до README (`e829209..3918732`) — 27 коммитов; 7 из них — `fix(...)`, и каждый закрывает находку ревью или упавшего теста.
+- Раунды исправлений после ревью понадобились в 7 задачах из 17 (6, 9, 11, 12, 14, 16, 17).
+- Финальное ревью всей ветки (`e829209..e6d033e`, 29 коммитов) нашло 3 Important и 5 Minor. Главные: форма не давала сохранить поездку через полночь (23:40 → 00:15), а любой запрос к `/api/*` без cookie, даже к несуществующему пути, создавал и заполнял песочницу. Всё закрыто одним раундом исправлений: `30f6727`, `42ecff3`, `dcda2d1`, `9749174` и коммит с этой правкой документации.
 - Один раз ошибся сам ревьюер: в задаче 2 он посчитал баг валидации «намеренным». Баг поймал тест формы в задаче 9, и задачу 2 переоткрыли.
 - Самый поучительный случай — Docker (задача 14). Исполнитель не мог запустить Docker и сдал работу с «симуляцией». Ревью пометило Critical: старый corepack и тег `node:22.12`, скорее всего, ломают сборку. При подготовке этой документации исходный Dockerfile (коммит `2f37a13`) собрали заново. Сборка действительно падает на `corepack prepare pnpm@12.10.1` (`Internal Error: Cannot find matching keyid`). Если обновить только corepack, образ на `node:22.12` собирается, но сервер падает с `Segmentation fault` при открытии SQLite (better-sqlite3). Подробности — в AI_LOG.
 
@@ -316,8 +317,13 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 
   После этого каждый push в `main` выполняет: миграции D1 → `wrangler deploy` → ожидание нужного `commit` в `/api/health` → smoke-тест против прода.
 - **Видео к релизу.** `release-video.yml` рендерит MP4 и прикрепляет к опубликованному релизу. Сначала замените плейсхолдеры `LIVE_URL` / `REPO_URL` в `video/src/config.ts`: иначе воркфлоу остановится. Локально видео рендерится командами `pnpm build && pnpm demo:record && pnpm video:render`.
-- **Docker-образ** собирался и проверялся локально (Colima): нативно на arm64 (`compose up --wait` → healthy, сводка, e2e против контейнера 47 passed / 3 skipped, данные сохраняются в volume, процесс работает не от root) и для amd64 через `docker buildx --platform linux/amd64`. Перед этой документацией образ пересобран и запущен ещё раз (arm64). Задание `docker` в CI на GitHub ещё не запускалось: репозиторий пока не опубликован.
+- **Docker-образ** собирался и проверялся локально (Colima): нативно на arm64 (`compose up --wait` → healthy, сводка, e2e против контейнера 47 passed / 3 skipped, данные сохраняются в volume, процесс работает не от root) и для amd64 через `docker buildx --platform linux/amd64`. После финального раунда исправлений (corepack закреплён на 0.36.0) образ снова собран с нуля и запущен (arm64): healthy, сводка за 2026-10-01 верна, `/api/nope` → JSON 404, e2e Desktop против контейнера 31 passed. Задание `docker` в CI на GitHub ещё не запускалось: репозиторий пока не опубликован.
 - **Воркфлоу GitHub Actions** (`ci.yml`, `deploy.yml`, `release-video.yml`) написаны, но на GitHub ещё не запускались.
+- **Не сделано из спеки: ревью PR через Claude GitHub Action** (§2, §10). Нужен ваш ключ API, поэтому воркфлоу не добавлен. Разовая настройка:
+  1. В Claude Code выполнить `/install-github-app` (или вручную установить GitHub App Claude на репозиторий).
+  2. GitHub → Settings → Secrets and variables → Actions → **Secrets**: `ANTHROPIC_API_KEY`.
+  3. Добавить `.github/workflows/claude-review.yml` с `on: pull_request` и шагом `uses: anthropics/claude-code-action@v1` (`anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}`, `prompt: "Review this PR"`), права `contents: read`, `pull-requests: write`.
+- **Не сделано из спеки: комментарий о покрытии в PR и бейдж покрытия** (§10, §12). Покрытие считается локально (`vitest run --coverage`, цифры выше), но в CI не публикуется. Разовая настройка: в `ci.yml` запускать `pnpm --filter @shift/core exec vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=json` (так же для `@shift/api`), затем шаг `davelosert/vitest-coverage-report-action@v2` с `working-directory: packages/core` (и второй — для `apps/api`) и правом `pull-requests: write` у задания. Секреты не нужны: хватает `GITHUB_TOKEN`.
 - **Нет ограничения частоты запросов.** Каждый новый посетитель без cookie создаёт песочницу (15 вставок: сама песочница и 14 демо-поездок; D1 считает и записи индексов), поэтому скрипт может выбрать бесплатную квоту записей D1. Перед тем как делиться публичным URL, включите rate limiting: правило WAF Rate Limiting в Cloudflare (например, на `/api/*`) или биндинг Workers Rate Limiting с ключом по `cf-connecting-ip`. Биндинг в этом репозитории не реализован.
 - `vite-plugin-pwa` закреплён на 1.3.0: версия 2.0.0 вышла меньше двух недель назад.
 

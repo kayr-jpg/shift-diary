@@ -13,6 +13,9 @@
     {
       "binding": "DB",
       "database_name": "shift-diary",
+      // TODO(Kair): put the id printed by `pnpm exec wrangler d1 create shift-diary` here, once;
+      // see the one-time setup steps in the header of .github/workflows/deploy.yml (its first
+      // step fails the deploy while the placeholder below is still present).
       "database_id": "REPLACE_WITH_D1_ID",
       "migrations_dir": "apps/api/migrations"
     }
