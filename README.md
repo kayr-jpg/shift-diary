@@ -4,6 +4,8 @@
 
 [![CI][ci-badge]][ci] [![Deploy][deploy-badge]][deploy]
 
+<!-- TODO(Kair): бейдж покрытия добавить, когда CI начнёт публиковать отчёт о покрытии; пока цифры покрытия — только в разделе «Тесты» (локальный прогон). -->
+
 Веб-приложение и API, которые превращают поездки водителя в сводку заработка за день: выручка, комиссия, «на руки», наличные/карта. Повторная отправка той же поездки не создаёт дубль.
 
 - **Демо:** [`https://shift-diary.<your-subdomain>.workers.dev`][live] (Cloudflare Workers + D1) <!-- TODO(Kair): живой URL появится после первого деплоя, см. «Ограничения» -->
@@ -60,7 +62,7 @@ pnpm dev
 
 ## Требования → доказательства
 
-| # | Требование arqa | Код | Тест, который это доказывает |
+| # | Требование | Код | Тест, который это доказывает |
 |---|---|---|---|
 | R1 | API отдаёт поездки за выбранный день и сводку: количество, выручка, комиссия, «на руки», наличные/карта | [`apps/api/src/routes/read.ts`](apps/api/src/routes/read.ts#L12-L29) (`GET /api/trips?date=`), [`packages/core/src/summary.ts`](packages/core/src/summary.ts#L13-L27) (`summarize`), [`packages/core/src/time.ts`](packages/core/src/time.ts#L23-L29) (границы дня) | [`apps/api/test/get-trips.test.ts`](apps/api/test/get-trips.test.ts#L7): «2026-10-01 → exact brief summary, trips sorted by start»; «empty day → zero summary and no trips»; «midnight-crossing trip appears on its start day only» |
 | R2 | Клиент показывает сводку и список поездок, умеет переключать дни | [`apps/web/src/App.tsx`](apps/web/src/App.tsx), [`SummaryCard.tsx`](apps/web/src/components/SummaryCard.tsx), [`TripList.tsx`](apps/web/src/components/TripList.tsx), [`DayStrip.tsx`](apps/web/src/components/DayStrip.tsx), [`DaySwipe.tsx`](apps/web/src/components/DaySwipe.tsx) | [`apps/web/test/App.test.tsx`](apps/web/test/App.test.tsx#L93): «opens the latest day with trips and shows the brief's summary and trips», «next-day arrow requests the next date…»; e2e в реальном браузере, [`e2e/tests/main-flow.spec.ts`](e2e/tests/main-flow.spec.ts): «arrows switch to the next day and back», «date strip selects a day» |
@@ -263,7 +265,7 @@ CI (`.github/workflows/ci.yml`, на каждый PR): установка → ty
 - 26 коммитов до этой документации; 7 из них — `fix(...)`, и каждый закрывает находку ревью или упавшего теста.
 - Раунды исправлений после ревью понадобились в 6 задачах из 16 (6, 9, 11, 12, 14, 16).
 - Один раз ошибся сам ревьюер: в задаче 2 он посчитал баг валидации «намеренным». Баг поймал тест формы в задаче 9, и задачу 2 переоткрыли.
-- Самый поучительный случай — Docker (задача 14). Исполнитель не мог запустить Docker и сдал работу с «симуляцией». Ревью пометило Critical, а настоящая сборка подтвердила, что образ не собирался.
+- Самый поучительный случай — Docker (задача 14). Исполнитель не мог запустить Docker и сдал работу с «симуляцией». Ревью пометило Critical: старый corepack и тег `node:22.12`, скорее всего, ломают сборку. При подготовке этой документации исходный Dockerfile (коммит `2f37a13`) собрали заново. Сборка действительно падает на `corepack prepare pnpm@12.10.1` (`Internal Error: Cannot find matching keyid`). Если обновить только corepack, образ на `node:22.12` собирается, но сервер падает с `Segmentation fault` при открытии SQLite (better-sqlite3). Подробности — в AI_LOG.
 
 Подробно, со всеми случаями, SHA и тем, как их поймали: **[`docs/AI_LOG.md`](docs/AI_LOG.md)**.
 
@@ -305,7 +307,7 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 ## Ограничения
 
 - **Вне рамок по спеке:** авторизация, несколько водителей, офлайн-синхронизация записей, редактирование и удаление поездок, нативные приложения.
-- **Прод ещё не развёрнут.** Живой URL, бейджи и видео в этом README пока плейсхолдеры. Код деплоя готов и проверен локально: `wrangler dev --local` + smoke 5/5. Для первого деплоя нужна разовая настройка (шаги из шапки `.github/workflows/deploy.yml`):
+- **Прод ещё не развёрнут.** Живой URL, бейджи и видео в этом README пока плейсхолдеры. Код деплоя готов. Проверен только локально, в задаче 15: `wrangler dev --local` + smoke 5/5. Ни в CI, ни против прода smoke ещё не запускался. Для первого деплоя нужна разовая настройка (шаги из шапки `.github/workflows/deploy.yml`):
   1. Создать базу D1: `pnpm exec wrangler d1 create shift-diary`.
   2. Вписать выданный `database_id` в `wrangler.jsonc` вместо `REPLACE_WITH_D1_ID` и закоммитить.
   3. GitHub → Settings → Secrets and variables → Actions → **Secrets**: `CLOUDFLARE_API_TOKEN` (права «Edit Cloudflare Workers» и «D1:Edit») и `CLOUDFLARE_ACCOUNT_ID`.
