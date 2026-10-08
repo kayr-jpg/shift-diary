@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { sandboxes, trips } from "./db/schema";
 import type { StoredTrip, TripRepository } from "./repo";
@@ -28,6 +28,9 @@ const row = (sandboxId: string, t: StoredTrip, now: number) => ({
 });
 
 export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
+  // Per-connection setting in SQLite; make FK enforcement a property of the repo, not of callers.
+  db.run(sql`PRAGMA foreign_keys = ON`);
+
   const insertSeed = (
     tx: Pick<BetterSQLite3Database, "insert">,
     id: string,

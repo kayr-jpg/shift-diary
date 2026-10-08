@@ -1,4 +1,6 @@
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import type { Env } from "../env";
 import { diffCanonical, findOverlaps, validateTrip, type Trip } from "@shift/core";
 import type { StoredTrip, TripRepository } from "../repo";
 import { renderInstant, renderTrip, toStoredTrip } from "../render";
@@ -6,16 +8,6 @@ import { renderInstant, renderTrip, toStoredTrip } from "../render";
 const DAY_MS = 86_400_000;
 
 export type TripRoutesDeps = { repo: TripRepository; now: () => number };
-
-/**
- * Minimal sandbox resolution: the `X-Sandbox-Id` header must name an existing sandbox.
- * Placeholder until the sandbox middleware (cookie / auto-create) replaces it.
- */
-async function resolveSandbox(c: Context, repo: TripRepository): Promise<string | null> {
-  const id = c.req.header("X-Sandbox-Id");
-  if (!id) return null;
-  return (await repo.sandboxExists(id)) ? id : null;
-}
 
 /** Parsed JSON body, or `undefined` when the body is not valid JSON (validation then reports every field). */
 async function readJson(c: Context): Promise<unknown> {
@@ -35,12 +27,16 @@ function conflictDiff(stored: StoredTrip, sent: Trip, sentStored: StoredTrip) {
   return diff;
 }
 
-export function tripRoutes({ repo, now }: TripRoutesDeps): Hono {
-  const app = new Hono();
+const MAX_BODY_BYTES = 16 * 1024;
 
-  app.post("/", async (c) => {
-    const sandboxId = await resolveSandbox(c, repo);
-    if (!sandboxId) return c.json({ code: "SANDBOX_REQUIRED" }, 400);
+export function tripRoutes({ repo, now }: TripRoutesDeps): Hono<Env> {
+  const app = new Hono<Env>();
+
+  app.post(
+    "/",
+    bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ code: "BODY_TOO_LARGE" }, 413) }),
+    async (c) => {
+    const sandboxId = c.var.sandboxId;
 
     const result = validateTrip(await readJson(c));
     if (!result.ok) return c.json({ errors: result.errors }, 422);
@@ -63,7 +59,8 @@ export function tripRoutes({ repo, now }: TripRoutesDeps): Hono {
         ? { ...renderTrip(stored), warnings: overlaps.map((id) => ({ code: "OVERLAP", with: id })) }
         : renderTrip(stored);
     return c.json(body, 201);
-  });
+    },
+  );
 
   return app;
 }

@@ -8,6 +8,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const OTHER = "e".repeat(32);
+
 describe("POST /api/trips — idempotency", () => {
   it("creates a new trip: 201 with the trip, original offsets preserved", async () => {
     const { post, repo, sandboxId } = await makeTestApp();
@@ -171,39 +173,49 @@ describe("POST /api/trips — overlap warnings", () => {
 describe("POST /api/trips — sandboxes", () => {
   it("isolates the same id across sandboxes: both 201, one row each", async () => {
     const { post, repo, sandboxId } = await makeTestApp();
-    await repo.createSandbox("other", [], NOW);
+    await repo.createSandbox(OTHER, [], NOW);
     const a = await post(trip());
-    const b = await post(trip({ amount: 9999 }), { sandbox: "other" });
+    const b = await post(trip({ amount: 9999 }), { sandbox: OTHER });
     expect(a.status).toBe(201);
     expect(b.status).toBe(201);
     expect(await repo.listAll(sandboxId)).toHaveLength(1);
-    const other = await repo.listAll("other");
+    const other = await repo.listAll(OTHER);
     expect(other).toHaveLength(1);
     expect(other[0]?.amount).toBe(9999);
   });
 
   it("does not warn about overlaps with trips of another sandbox", async () => {
     const { post, repo } = await makeTestApp();
-    await repo.createSandbox("other", [], NOW);
-    await post(trip(), { sandbox: "other" });
+    await repo.createSandbox(OTHER, [], NOW);
+    await post(trip(), { sandbox: OTHER });
     const res = await post(trip({ id: "t2" }));
     expect(res.status).toBe(201);
     expect(await res.json()).not.toHaveProperty("warnings");
   });
 
-  it("missing X-Sandbox-Id → 400 SANDBOX_REQUIRED", async () => {
-    const { post } = await makeTestApp();
+  it("missing X-Sandbox-Id → creates a fresh sandbox and stores the trip there", async () => {
+    const { post, repo, sandboxId } = await makeTestApp();
     const res = await post(trip(), { sandbox: null });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ code: "SANDBOX_REQUIRED" });
+    expect(res.status).toBe(201);
+    const id = res.headers.get("X-Sandbox-Id");
+    expect(id).toMatch(/^[0-9a-f]{32}$/);
+    expect(await repo.listAll(id as string)).toHaveLength(1);
+    expect(await repo.listAll(sandboxId)).toHaveLength(0);
   });
 
-  it("unknown X-Sandbox-Id → 400 SANDBOX_REQUIRED and nothing stored", async () => {
+  it("unknown X-Sandbox-Id → fresh sandbox, nothing stored under the sent id", async () => {
     const { post, repo } = await makeTestApp();
     const res = await post(trip(), { sandbox: "nope" });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ code: "SANDBOX_REQUIRED" });
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Sandbox-Id")).not.toBe("nope");
     expect(await repo.listAll("nope")).toHaveLength(0);
+  });
+
+  it("body over 16 KB → 413 BODY_TOO_LARGE", async () => {
+    const { post } = await makeTestApp();
+    const res = await post(trip({ id: "x".repeat(20_000) }));
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ code: "BODY_TOO_LARGE" });
   });
 });
 

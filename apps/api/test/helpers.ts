@@ -7,6 +7,10 @@ import type { Trip } from "@shift/core";
 import { createApp } from "../src/app";
 import { createSqliteRepo } from "../src/repo.sqlite";
 import type { TripRepository } from "../src/repo";
+import seedTrips from "../../../data/trips.json";
+
+/** The real demo seed shipped with the product. */
+export const SEED = seedTrips as Trip[];
 
 const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
 
@@ -21,11 +25,11 @@ export function makeTestRepo(): TripRepository {
   return createSqliteRepo(db);
 }
 
-export async function makeTestApp(opts: { repo?: TripRepository } = {}) {
+export async function makeTestApp(opts: { repo?: TripRepository; seed?: Trip[] } = {}) {
   const repo = opts.repo ?? makeTestRepo();
-  const sandboxId = randomUUID();
+  const sandboxId = randomUUID().replaceAll("-", "");
   if (!opts.repo) await repo.createSandbox(sandboxId, [], NOW);
-  const app = createApp({ repo, seed: [], version: "test", commit: "test", now: () => NOW });
+  const app = createApp({ repo, seed: opts.seed ?? [], version: "test", commit: "test", now: () => NOW });
 
   /** POSTs a JSON value (or a raw string body when `raw` is set) to /api/trips. */
   const post = (body: unknown, o: { sandbox?: string | null; raw?: boolean } = {}) => {
@@ -39,7 +43,15 @@ export async function makeTestApp(opts: { repo?: TripRepository } = {}) {
     });
   };
 
-  return { app, repo, sandboxId, post };
+  /** Request against the app; sandbox defaults to the pre-created one, `null` sends none. */
+  const req = (path: string, o: { sandbox?: string | null; method?: string; headers?: Record<string, string> } = {}) => {
+    const headers: Record<string, string> = { ...o.headers };
+    const sb = o.sandbox === undefined ? sandboxId : o.sandbox;
+    if (sb !== null) headers["X-Sandbox-Id"] = sb;
+    return app.request(path, { method: o.method ?? "GET", headers });
+  };
+
+  return { app, repo, sandboxId, post, req };
 }
 
 export const trip = (over: Partial<Record<keyof Trip, unknown>> = {}): Record<string, unknown> => ({
