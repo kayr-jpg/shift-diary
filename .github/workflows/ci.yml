@@ -42,3 +42,23 @@ jobs:
             e2e/playwright-report/
             e2e/test-results/
           retention-days: 14
+  docker:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
+      - run: docker compose up -d --wait --wait-timeout 90
+      - name: Smoke test
+        run: |
+          curl --fail --silent --show-error http://localhost:8787/api/health
+          trips=$(curl --fail --silent --show-error "http://localhost:8787/api/trips?date=2026-10-01")
+          echo "$trips"
+          grep -q '"tripCount":2' <<< "$trips"
+          page=$(curl --fail --silent --show-error http://localhost:8787/)
+          grep -qi '<!doctype html' <<< "$page"
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v
