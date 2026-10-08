@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, NetworkError, getDay, postTrip, reset } from "../src/api";
-import { createQueryClient, retryDelay } from "../src/queryClient";
+import { createQueryClient, retryDelay, shouldRetry } from "../src/queryClient";
 
 const trip = {
   id: "t1",
@@ -11,7 +11,10 @@ const trip = {
   payment: "card" as const,
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("api client", () => {
   it("postTrip reports replay and sends the cookie", async () => {
@@ -49,7 +52,19 @@ describe("api client", () => {
   });
 
   it("GET queries retry 3 times with exponential backoff", () => {
-    expect(createQueryClient().getDefaultOptions().queries?.retry).toBe(3);
+    const q = createQueryClient().getDefaultOptions().queries;
+    expect(q?.retry).toBe(shouldRetry);
+    expect(q?.networkMode).toBe("always");
+    expect(q?.refetchOnReconnect).toBe(true);
+    expect([0, 1, 2, 3].map((n) => shouldRetry(n, new Error("x")))).toEqual([true, true, true, false]);
     expect([0, 1, 2, 5].map(retryDelay)).toEqual([1000, 2000, 4000, 10_000]);
+  });
+
+  it("does not retry a network failure while the browser is offline", () => {
+    const err = new NetworkError(new TypeError("Failed to fetch"));
+    expect(shouldRetry(0, err)).toBe(true);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    expect(shouldRetry(0, err)).toBe(false);
+    expect(shouldRetry(0, new Error("500"))).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import App from "../src/App";
 import { createQueryClient } from "../src/queryClient";
 import i18n, { readStoredLang } from "../src/i18n";
@@ -206,11 +206,12 @@ describe("api client", () => {
 });
 
 describe("day swipe", () => {
-  function swipe(dx: number, dy: number) {
+  const touch = { pointerId: 1, isPrimary: true, pointerType: "touch" };
+  function swipe(dx: number, dy: number, base: Record<string, unknown> = touch) {
     const area = screen.getByTestId("day-swipe");
-    fireEvent.pointerDown(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
-    fireEvent.pointerMove(area, { pointerId: 1, isPrimary: true, clientX: 200 + dx / 2, clientY: 300 + dy / 2 });
-    fireEvent.pointerUp(area, { pointerId: 1, isPrimary: true, clientX: 200 + dx, clientY: 300 + dy });
+    fireEvent.pointerDown(area, { ...base, clientX: 200, clientY: 300 });
+    fireEvent.pointerMove(area, { ...base, clientX: 200 + dx / 2, clientY: 300 + dy / 2 });
+    fireEvent.pointerUp(area, { ...base, clientX: 200 + dx, clientY: 300 + dy });
   }
 
   it("is restricted to the day panel and lets vertical panning through", async () => {
@@ -260,11 +261,57 @@ describe("day swipe", () => {
     renderApp();
     await screen.findByTestId("net");
     const area = screen.getByTestId("day-swipe");
-    fireEvent.pointerDown(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
-    fireEvent.pointerCancel(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
-    fireEvent.pointerUp(area, { pointerId: 1, isPrimary: true, clientX: 50, clientY: 300 });
+    fireEvent.pointerDown(area, { ...touch, clientX: 200, clientY: 300 });
+    fireEvent.pointerCancel(area, { ...touch, clientX: 200, clientY: 300 });
+    fireEvent.pointerUp(area, { ...touch, clientX: 50, clientY: 300 });
     await act(async () => {});
     expect(window.location.hash).toBe("#2026-10-01");
+  });
+
+  it("a mouse drag does not navigate (touch and pen only)", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    swipe(-120, 0, { pointerId: 1, isPrimary: true, pointerType: "mouse" });
+    await act(async () => {});
+    expect(requested).not.toContain("/api/trips?date=2026-10-02");
+    expect(window.location.hash).toBe("#2026-10-01");
+  });
+
+  it("a second finger cancels the gesture (pinch is not a swipe)", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const area = screen.getByTestId("day-swipe");
+    fireEvent.pointerDown(area, { ...touch, clientX: 200, clientY: 300 });
+    fireEvent.pointerDown(area, { pointerId: 2, isPrimary: false, pointerType: "touch", clientX: 260, clientY: 300 });
+    fireEvent.pointerUp(area, { pointerId: 2, isPrimary: false, pointerType: "touch", clientX: 300, clientY: 300 });
+    fireEvent.pointerUp(area, { ...touch, clientX: 60, clientY: 300 });
+    await act(async () => {});
+    expect(window.location.hash).toBe("#2026-10-01");
+  });
+
+  it("only the click right after a swipe is swallowed, not a later keyboard click", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const area = screen.getByTestId("day-swipe");
+    const clicks = vi.fn();
+    area.addEventListener("click", clicks);
+    // Swipe that ends without a click (the browser did not synthesize one).
+    swipe(-120, 0);
+    await screen.findByText(ru.empty.title);
+    await act(() => new Promise((r) => setTimeout(r, 10)));
+    fireEvent.click(area); // e.g. Enter on a focused button inside the panel
+    expect(clicks).toHaveBeenCalledTimes(1);
+  });
+
+  it("the click synthesized by the swipe itself is swallowed", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const area = screen.getByTestId("day-swipe");
+    const clicks = vi.fn();
+    area.addEventListener("click", clicks);
+    swipe(-120, 0);
+    fireEvent.click(area);
+    expect(clicks).not.toHaveBeenCalled();
   });
 });
 
@@ -274,6 +321,7 @@ describe("offline", () => {
     online = true;
     vi.spyOn(navigator, "onLine", "get").mockImplementation(() => online);
   });
+  afterEach(() => onlineManager.setOnline(true));
   const go = (state: boolean) =>
     act(() => {
       online = state;
@@ -298,6 +346,26 @@ describe("offline", () => {
     expect(screen.queryByText(ru.offline.banner)).toBeNull();
     expect((add as HTMLButtonElement).disabled).toBe(false);
     expect(add.getAttribute("aria-describedby")).toBeNull();
+  });
+
+  it("an uncached day offline shows the no-connection error (not an endless skeleton) and loads on reconnect", async () => {
+    window.history.replaceState(null, "", "/#2026-10-02");
+    go(false);
+    stubApi({ fail: true });
+    // Default client (with retries): offline network failures must not be retried for seconds.
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <App />
+      </QueryClientProvider>,
+    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain(ru.errors.NETWORK);
+    expect(screen.queryByRole("status", { busy: true })).toBeNull();
+
+    stubApi();
+    go(true);
+    expect(await screen.findByText(ru.empty.title)).toBeTruthy();
+    expect(requested).toContain("/api/trips?date=2026-10-02");
   });
 
   it("starts offline when the browser already is", async () => {

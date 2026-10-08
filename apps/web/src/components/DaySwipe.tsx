@@ -29,18 +29,30 @@ export function DaySwipe({ date, onSwipe, children }: Props) {
   if (date !== last.date) setLast({ date, dir });
 
   const onPointerDown = (e: PointerEvent) => {
-    if (!e.isPrimary) return;
-    start.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
     swallowClick.current = false;
+    // Touch and pen only: a mouse drag is text selection, not navigation. A second finger
+    // is never the primary pointer, so it (pinch, two-finger scroll) cancels the gesture.
+    // A new primary pointer always starts fresh, even if an earlier pointerup was missed.
+    if (e.pointerType === "mouse" || !e.isPrimary) {
+      start.current = null;
+      return;
+    }
+    start.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
   };
   const onPointerUp = (e: PointerEvent) => {
     const s = start.current;
-    start.current = null;
     if (!s || s.id !== e.pointerId) return;
+    start.current = null;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
     if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= SWIPE_RATIO * Math.abs(dy)) return;
-    swallowClick.current = true; // the drag must not also press a button it ended on
+    // The drag must not also press a button it ended on. The browser dispatches that click
+    // right after pointerup, so the guard expires on the next task and can never swallow a
+    // later (e.g. keyboard) click.
+    swallowClick.current = true;
+    window.setTimeout(() => {
+      swallowClick.current = false;
+    }, 0);
     onSwipe(dx < 0 ? 1 : -1);
   };
   const cancel = () => {
@@ -50,7 +62,7 @@ export function DaySwipe({ date, onSwipe, children }: Props) {
   return (
     <div
       data-testid="day-swipe"
-      className="relative touch-pan-y overflow-x-clip"
+      className="relative touch-pan-y overflow-x-clip pointer-coarse:select-none"
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={cancel}
