@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "test": "vitest run --passWithNoTests",
     "build": "tsc --noEmit",
+    "dev": "tsx watch src/node.ts",
     "dev:node": "tsx watch src/node.ts",
     "start:node": "tsx src/node.ts",
     "db:generate": "drizzle-kit generate"

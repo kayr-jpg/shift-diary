@@ -5,6 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@12.10.1",
   "scripts": {
+    "dev": "pnpm --parallel --filter @shift/api --filter @shift/web run dev",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "test": "pnpm -r --if-present --filter \"!@shift/e2e\" test",
