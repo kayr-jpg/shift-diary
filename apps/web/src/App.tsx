@@ -12,6 +12,8 @@ import { AddTripSheet } from "./components/AddTripSheet";
 import { LazyReceipt, preloadReceipt } from "./components/LazyReceipt";
 import { UnderTheHood } from "./components/UnderTheHood";
 import { ChevronLeft, ChevronRight } from "./components/Icons";
+import { DaySwipe } from "./components/DaySwipe";
+import { OfflineBanner, useOnline } from "./components/OfflineBanner";
 
 /** Today if it has trips, else the latest day with trips, else today. */
 export function pickInitialDate(days: DayCount[], today: string): string {
@@ -59,7 +61,7 @@ function Skeleton() {
   );
 }
 
-function DayView({ date }: { date: string }) {
+function DayView({ date, onStep }: { date: string; onStep: (step: -1 | 1) => void }) {
   const { t } = useTranslation();
   const day = useDay(date);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -72,9 +74,10 @@ function DayView({ date }: { date: string }) {
     const id = window.setTimeout(preloadReceipt, 1500);
     return () => window.clearTimeout(id);
   }, [hasTrips]);
-  if (day.isPending) return <Skeleton />;
-  if (day.isError) {
-    return (
+  let panel;
+  if (day.isPending) panel = <Skeleton />;
+  else if (day.isError) {
+    panel = (
       <div role="alert" className="rounded-3xl bg-red-50 p-6 text-center ring-1 ring-red-200 dark:bg-red-950/40 dark:ring-red-900">
         <p className="text-lg font-semibold text-red-900 dark:text-red-200">{t("state.error")}</p>
         <p className="mt-1 text-red-800 dark:text-red-300">{t(errorKey(day.error))}</p>
@@ -87,21 +90,30 @@ function DayView({ date }: { date: string }) {
         </button>
       </div>
     );
+  } else {
+    panel = (
+      <div className="flex flex-col gap-4">
+        <SummaryCard
+          summary={day.data.summary}
+          onCloseShift={() => setReceiptOpen(true)}
+          closeShiftRef={closeShiftRef}
+          onPreload={preloadReceipt}
+          busy={receiptBusy}
+        />
+        <TripList trips={day.data.trips} />
+      </div>
+    );
   }
   return (
-    <div className="flex flex-col gap-4">
-      <SummaryCard
-        summary={day.data.summary}
-        onCloseShift={() => setReceiptOpen(true)}
-        closeShiftRef={closeShiftRef}
-        onPreload={preloadReceipt}
-        busy={receiptBusy}
-      />
-      <TripList trips={day.data.trips} />
-      {receiptOpen && (
+    <>
+      {/* Swipe covers only the summary/list; the receipt dialog stays outside its transform. */}
+      <DaySwipe date={date} onSwipe={onStep}>
+        {panel}
+      </DaySwipe>
+      {receiptOpen && day.data && (
         <LazyReceipt day={day.data} onClose={() => setReceiptOpen(false)} openerRef={closeShiftRef} onBusy={setReceiptBusy} />
       )}
-    </div>
+    </>
   );
 }
 
@@ -115,6 +127,7 @@ export default function App() {
   const today = todayKz();
   const [sheetOpen, setSheetOpen] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
+  const online = useOnline();
 
   const date = hashDate ?? (days.isSuccess ? pickInitialDate(days.data, today) : days.isError ? today : null);
 
@@ -138,6 +151,7 @@ export default function App() {
           <h1 className="text-lg font-bold leading-tight">{t("app.title")}</h1>
           <LangToggle />
         </div>
+        <OfflineBanner />
       </header>
 
       <main className="mx-auto flex max-w-2xl flex-col gap-4 px-4 pb-24 pt-4">
@@ -168,18 +182,28 @@ export default function App() {
             >
               {t("nav.today")}
             </button>
-            <DayView date={date} />
+            <DayView date={date} onStep={(step) => setDate(addDays(date, step))} />
             <UnderTheHood date={date} lastTrip={lastTrip} />
           </>
         )}
       </main>
       {date !== null && (
         <>
+          {!online && (
+            <p
+              id="add-offline-hint"
+              className="fixed bottom-22 right-4 z-30 max-w-60 rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {t("offline.addDisabled")}
+            </p>
+          )}
           <button
             ref={addButtonRef}
             type="button"
             onClick={() => setSheetOpen(true)}
-            className="fixed bottom-5 right-4 z-30 min-h-14 rounded-full bg-emerald-700 px-7 text-lg font-bold text-white shadow-lg hover:bg-emerald-800 active:bg-emerald-900"
+            disabled={!online}
+            aria-describedby={online ? undefined : "add-offline-hint"}
+            className="fixed bottom-5 right-4 z-30 min-h-14 rounded-full bg-emerald-700 px-7 text-lg font-bold text-white shadow-lg hover:bg-emerald-800 active:bg-emerald-900 disabled:bg-zinc-400 disabled:text-zinc-800 disabled:shadow-none dark:disabled:bg-zinc-700 dark:disabled:text-zinc-200"
           >
             {t("form.open")}
           </button>

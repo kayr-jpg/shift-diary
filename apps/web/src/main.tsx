@@ -16,3 +16,11 @@ createRoot(root).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+if (import.meta.env.PROD) {
+  import("./registerSw")
+    .then((m) => m.registerServiceWorker())
+    .catch(() => {
+      // Offline support is an enhancement; never let it break the app.
+    });
+}

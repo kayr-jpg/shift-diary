@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { formatMoney } from "../money";
 import { currentLang } from "../i18n";
 import { Money } from "./Money";
+import { CountUp } from "./CountUp";
 
 function SplitBar({ cash, card }: { cash: number; card: number }) {
   const { t } = useTranslation();
@@ -65,7 +66,7 @@ export function SummaryCard({
         <p className="text-base font-medium text-zinc-600 dark:text-zinc-400">{t("summary.net")}</p>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("summary.trips", { count: summary.tripCount })}</p>
       </div>
-      <Money
+      <CountUp
         value={summary.net}
         testId="net"
         className="mt-1 block text-5xl font-extrabold tracking-tight text-emerald-700 sm:text-6xl dark:text-emerald-400"

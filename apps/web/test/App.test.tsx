@@ -204,3 +204,105 @@ describe("api client", () => {
     await waitFor(() => expect(requested[0]).toBe("/api/days"));
   });
 });
+
+describe("day swipe", () => {
+  function swipe(dx: number, dy: number) {
+    const area = screen.getByTestId("day-swipe");
+    fireEvent.pointerDown(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
+    fireEvent.pointerMove(area, { pointerId: 1, isPrimary: true, clientX: 200 + dx / 2, clientY: 300 + dy / 2 });
+    fireEvent.pointerUp(area, { pointerId: 1, isPrimary: true, clientX: 200 + dx, clientY: 300 + dy });
+  }
+
+  it("is restricted to the day panel and lets vertical panning through", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const area = screen.getByTestId("day-swipe");
+    expect(area.className).toContain("touch-pan-y");
+    expect(area.contains(screen.getByRole("navigation", { name: ru.nav.strip }))).toBe(false);
+  });
+
+  it("swipe left past 60 px opens the next day", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    swipe(-120, 10);
+    await screen.findByText(ru.empty.title);
+    expect(requested).toContain("/api/trips?date=2026-10-02");
+    expect(window.location.hash).toBe("#2026-10-02");
+  });
+
+  it("swipe right opens the previous day", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    swipe(120, -5);
+    await screen.findByText(ru.empty.title);
+    expect(window.location.hash).toBe("#2026-09-30");
+  });
+
+  it("a short drag (30 px) does not navigate", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    swipe(-30, 0);
+    await act(async () => {});
+    expect(requested).not.toContain("/api/trips?date=2026-10-02");
+    expect(window.location.hash).toBe("#2026-10-01");
+  });
+
+  it("a mostly vertical drag does not navigate", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    swipe(-80, 200);
+    await act(async () => {});
+    expect(requested).not.toContain("/api/trips?date=2026-10-02");
+    expect(window.location.hash).toBe("#2026-10-01");
+  });
+
+  it("a cancelled pointer (browser took over to scroll) does not navigate", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const area = screen.getByTestId("day-swipe");
+    fireEvent.pointerDown(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
+    fireEvent.pointerCancel(area, { pointerId: 1, isPrimary: true, clientX: 200, clientY: 300 });
+    fireEvent.pointerUp(area, { pointerId: 1, isPrimary: true, clientX: 50, clientY: 300 });
+    await act(async () => {});
+    expect(window.location.hash).toBe("#2026-10-01");
+  });
+});
+
+describe("offline", () => {
+  let online = true;
+  beforeEach(() => {
+    online = true;
+    vi.spyOn(navigator, "onLine", "get").mockImplementation(() => online);
+  });
+  const go = (state: boolean) =>
+    act(() => {
+      online = state;
+      window.dispatchEvent(new Event(state ? "online" : "offline"));
+    });
+
+  it("shows a status banner and disables Add trip with a hint while offline", async () => {
+    renderApp();
+    await screen.findByTestId("net");
+    const add = screen.getByRole("button", { name: ru.form.open });
+    expect(screen.queryByText(ru.offline.banner)).toBeNull();
+    expect((add as HTMLButtonElement).disabled).toBe(false);
+
+    go(false);
+    const banner = screen.getByText(ru.offline.banner).closest('[role="status"]')!;
+    expect(banner.getAttribute("aria-live")).toBe("polite");
+    expect((add as HTMLButtonElement).disabled).toBe(true);
+    const hintId = add.getAttribute("aria-describedby")!;
+    expect(document.getElementById(hintId)?.textContent).toBe(ru.offline.addDisabled);
+
+    go(true);
+    expect(screen.queryByText(ru.offline.banner)).toBeNull();
+    expect((add as HTMLButtonElement).disabled).toBe(false);
+    expect(add.getAttribute("aria-describedby")).toBeNull();
+  });
+
+  it("starts offline when the browser already is", async () => {
+    online = false;
+    renderApp();
+    expect(await screen.findByText(ru.offline.banner)).toBeTruthy();
+  });
+});
