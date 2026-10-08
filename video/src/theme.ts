@@ -15,6 +15,7 @@ export const SCENES = {
 
 export const TOTAL_FRAMES = Object.values(SCENES).reduce((a, b) => a + b, 0);
 
+// Google Fonts are fetched at render (and Studio) time, so rendering needs network access.
 export const { fontFamily: SANS } = loadInter("normal", {
   weights: ["400", "600", "800"],
   subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"], // cyrillic-ext: Kazakh Қ, Ә, Ү…

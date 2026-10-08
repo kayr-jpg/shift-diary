@@ -4,7 +4,10 @@ import { Caption } from "./Caption";
 import { Fade } from "./Fade";
 import { C, SANS, money, useLayout } from "./theme";
 
-/** The seeded day 2026-10-01: two trips, card 2400/360 and cash 1500/225. */
+/**
+ * Mirrors the seed day 2026-10-01 (data/trips.json: t1 card 2400/360, t2 cash 1500/225), the same
+ * figures the e2e helpers assert (e2e/tests/helpers.ts SEED) and the recorded footage opens on.
+ */
 const DAY = { trips: 2, revenue: 3900, commission: 585, net: 3315, cash: 1500, card: 2400 } as const;
 
 /** A value that flies in from `from` (px, rotation) and lands in its slot with a spring. */

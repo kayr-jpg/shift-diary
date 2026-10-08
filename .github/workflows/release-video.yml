@@ -18,6 +18,12 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: End-card placeholders must be replaced
+        run: |
+          if grep -nE '<your-subdomain>|<user>' video/src/config.ts; then
+            echo "::error file=video/src/config.ts::Replace the LIVE_URL / REPO_URL placeholders in video/src/config.ts before publishing a release."
+            exit 1
+          fi
       - run: pnpm i --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @shift/e2e exec playwright install --with-deps chromium

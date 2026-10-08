@@ -11,8 +11,8 @@ Avoid wrapping a single timing-capable component in a redundant `<Sequence>`.
 Put `name`, `from`, `durationInFrames`, `loop`, `volume`, and `premountFor`
 directly on `<Audio>` from `@remotion/media` whenever their combination gives the intended timing.
 
-See [Remotion Interactivity](../remotion-interactivity/REFERENCE.md) for creating
-schema-wrapped components and [connected compositions](connected-compositions.md)
+See [Remotion Interactivity](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-interactivity/REFERENCE.md) for creating
+schema-wrapped components and [connected compositions](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-markup/connected-compositions.md)
 for registering them with their own Studio timelines.
 
 ```tsx

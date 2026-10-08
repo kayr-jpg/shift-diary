@@ -32,4 +32,4 @@ See https://www.remotion.dev/docs/cli/render.md#--frames for more options.
 
 ## Transparent videos
 
-See [Transparent videos](./transparent-videos.md) for rendering out a video with transparency.
+See [Transparent videos](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-render/transparent-videos.md) for rendering out a video with transparency.

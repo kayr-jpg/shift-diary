@@ -62,7 +62,7 @@ Use `defaultProps` for composition-wide values that should be visible and editab
 Keep data owned by a child editor on that child's JSX node. For example,
 captions that should remain editable in the Caption editor belong as an inline
 array on `<BasicCaptions>`, not in composition `defaultProps` or a component
-prop. See [Displaying captions](../remotion-captions/display-captions.md).
+prop. See [Displaying captions](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-captions/display-captions.md).
 
 For Studio editing, keep `defaultProps` as an inline object literal on `<Composition>` or `<Still>`.
 Keep values that should be written back directly in the object instead of deriving them from a loop variable.
@@ -154,13 +154,13 @@ export const RemotionRoot = () => {
 
 ## Dynamic duration, width, and height
 
-Use [`calculateMetadata`](./calculate-metadata.md) to make dimensions, duration, or props dynamic based on input props, fetched data, or asset metadata.
+Use [`calculateMetadata`](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-markup/calculate-metadata.md) to make dimensions, duration, or props dynamic based on input props, fetched data, or asset metadata.
 
 ## Nesting compositions within another
 
 To render a composition's component inside another composition, use `<Sequence>` with `width` and `height` when the nested content needs its own dimensions.
 
-When the nested scene should have its own editable Studio timeline, use the [connected composition structure](connected-compositions.md).
+When the nested scene should have its own editable Studio timeline, use the [connected composition structure](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-markup/connected-compositions.md).
 
 ```tsx
 <>

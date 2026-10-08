@@ -12,11 +12,11 @@ If you detect a surprising change made in the meanwhile, don't overwrite it, ass
 
 ## Creating a video
 
-If the user asks to make, create, or build a new video or composition, load [Create a new Remotion video](./remotion-create/REFERENCE.md), whether or not a Remotion project already exists.
+If the user asks to make, create, or build a new video or composition, load [Create a new Remotion video](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-create/REFERENCE.md), whether or not a Remotion project already exists.
 
 ## New project setup
 
-If no Remotion project currently exists, load [Create a new Remotion project](./remotion-create/REFERENCE.md)
+If no Remotion project currently exists, load [Create a new Remotion project](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-create/REFERENCE.md)
 
 ## React Markup Best Practices
 
@@ -24,15 +24,15 @@ If you are writing Remotion React Markup, load [Remotion Markup Best Practices](
 
 ## Maps
 
-For static maps, animated routes and markers, geographic explainers, Mapbox, MapLibre, MapTiler, GeoJSON, or 3D geographic flyovers, load [Remotion Maps](./remotion-maps/REFERENCE.md).
+For static maps, animated routes and markers, geographic explainers, Mapbox, MapLibre, MapTiler, GeoJSON, or 3D geographic flyovers, load [Remotion Maps](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-maps/REFERENCE.md).
 
 ## Multimedia
 
-For achieving multimedia tasks in the browser, such as trimming, cropping videos, or getting metadata from them, load [Remotion Multimedia](./remotion-multimedia/REFERENCE.md)
+For achieving multimedia tasks in the browser, such as trimming, cropping videos, or getting metadata from them, load [Remotion Multimedia](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-multimedia/REFERENCE.md)
 
 ## Improving Interactivity
 
-By structuring the Remotion markup well, we can allow users to interactively change things in the Studio and write back to code. If relevant: [Interactivity Best Practices](./remotion-interactivity/REFERENCE.md)
+By structuring the Remotion markup well, we can allow users to interactively change things in the Studio and write back to code. If relevant: [Interactivity Best Practices](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-interactivity/REFERENCE.md)
 
 ## Open the preview
 
@@ -94,16 +94,16 @@ For advanced rendering beyond simple `npx remotion render`, see: [Rendering Best
 
 ## Captions
 
-When working with Captions, load [Remotion Captions](./remotion-captions/REFERENCE.md).
+When working with Captions, load [Remotion Captions](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-captions/REFERENCE.md).
 
 ## Creating a SaaS, automation or application
 
-Use the [Remotion SaaS skill](./remotion-saas/REFERENCE.md) for knowledge about Remotion-powered SaaS apps, such as `<Player>`, rendering on Lambda, Vercel, Cloudflare, via Express.js, client-side rendering, or for finding the right SaaS template.
+Use the [Remotion SaaS skill](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-saas/REFERENCE.md) for knowledge about Remotion-powered SaaS apps, such as `<Player>`, rendering on Lambda, Vercel, Cloudflare, via Express.js, client-side rendering, or for finding the right SaaS template.
 
 ## Looking up Remotion APIs and documentation
 
-To find and read current Remotion documentation, load [Remotion Docs](./remotion-docs/REFERENCE.md).
+To find and read current Remotion documentation, load [Remotion Docs](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-docs/REFERENCE.md).
 
 ## Upgrading
 
-To upgrade Remotion, related packages, compatible Mediabunny packages, and installed Remotion Agent Skills, load [Remotion Upgrade](./remotion-upgrade/REFERENCE.md).
+To upgrade Remotion, related packages, compatible Mediabunny packages, and installed Remotion Agent Skills, load [Remotion Upgrade](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-upgrade/REFERENCE.md).

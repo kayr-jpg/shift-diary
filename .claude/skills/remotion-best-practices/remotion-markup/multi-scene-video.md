@@ -1,7 +1,7 @@
 # Multi-scene videos
 
 Put each substantial scene in its own component and file.  
-Register those components as [connected compositions](connected-compositions.md) so each scene has an editable Studio timeline.
+Register those components as [connected compositions](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-markup/connected-compositions.md) so each scene has an editable Studio timeline.
 
 Treat the parent timeline as an editable document: Author every scene that
 should be edited independently as a separate interactive component,
@@ -102,7 +102,7 @@ export const RemotionRoot = () => (
 Keep each scene's standalone metadata and `defaultProps` consistent with how it is used in the main video.
 
 With no transition, this example needs a 210-frame main composition.  
-If you add a transition, account for its overlap in the main duration; see [transitions](transitions.md).
+If you add a transition, account for its overlap in the main duration; see [transitions](https://github.com/remotion-dev/skills/blob/main/skills/remotion-best-practices/remotion-markup/transitions.md).
 
 Use `<Series>` for consecutive scenes that do not need transitions.  
 For independently placed scenes, prefer components made with `Interactive.withSchema({wrapInSequence: true})` and put `from` and `durationInFrames` directly on each instance.

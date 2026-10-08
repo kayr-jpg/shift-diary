@@ -6,7 +6,8 @@
  * Prerequisites, prepared first:
  *   - public/footage.webm from `pnpm demo:record` (git-ignored, regenerated in CI);
  *   - src/proof.json, regenerated here by running the real test suites (scripts/collect-proof.mjs).
- *     Pass --skip-proof to reuse the committed proof.json (e.g. right after `pnpm video:proof`).
+ *     Pass --skip-proof to reuse the existing proof.json — only right after `pnpm video:proof`: the
+ *     committed proof.json may be stale (test counts change), and the Proof scene would then lie.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";

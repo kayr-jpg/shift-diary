@@ -6,7 +6,11 @@ import { C, MONO, SANS, useLayout } from "./theme";
 
 type Line = { text: string; color: string; bold?: boolean };
 
-/** Terminal lines built from the captured vitest summaries in proof.json (scripts/collect-proof.mjs). */
+/**
+ * Terminal lines built from the captured vitest summaries in proof.json (scripts/collect-proof.mjs).
+ * The "$ pnpm test" prompt is staged: collect-proof runs `vitest run` per package (core, api, web), which
+ * is what `pnpm test` runs, and the summary lines shown under each package are vitest's own output.
+ */
 const LINES: Line[] = [
   { text: `$ ${proof.command}`, color: C.text, bold: true },
   ...proof.packages.flatMap((p): Line[] => [
