@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { dayRange, findOverlaps, isValidDate, localDateOf, summarize, KZ_OFFSET } from "@shift/core";
 import type { Env } from "../env";
 import { renderTrip } from "../render";
@@ -6,10 +6,10 @@ import type { TripRepository } from "../repo";
 
 const HALF_DAY_MS = 12 * 3_600_000;
 
-export function readRoutes({ repo }: { repo: TripRepository }) {
+export function readRoutes({ repo, sandbox }: { repo: TripRepository; sandbox: MiddlewareHandler<Env> }) {
   const trips = new Hono<Env>();
 
-  trips.get("/", async (c) => {
+  trips.get("/", sandbox, async (c) => {
     const date = c.req.query("date") ?? "";
     if (!isValidDate(date)) return c.json({ errors: [{ field: "date", code: "DATE_INVALID" }] }, 422);
 
@@ -29,7 +29,7 @@ export function readRoutes({ repo }: { repo: TripRepository }) {
   });
 
   const days = new Hono<Env>();
-  days.get("/", async (c) => {
+  days.get("/", sandbox, async (c) => {
     const counts = new Map<string, number>();
     for (const t of await repo.listAll(c.var.sandboxId)) {
       const d = localDateOf(t.startUtc);

@@ -9,7 +9,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { Hono, type MiddlewareHandler } from "hono";
 import type { Trip } from "@shift/core";
 import seedTrips from "../../../data/trips.json";
-import { createApp } from "./app";
+import { createApp, notFoundJson } from "./app";
 import { createSqliteRepo } from "./repo.sqlite";
 
 // Resolved against this module, not the cwd, so the server starts from anywhere.
@@ -35,6 +35,8 @@ const repo = createSqliteRepo(db);
 
 const app = new Hono();
 app.route("/", createApp({ repo, seed: seedTrips as Trip[], version: VERSION, commit: COMMIT }));
+// A mounted sub-app's notFound is not consulted by the parent, so install the JSON 404 here too.
+app.notFound(notFoundJson);
 
 const isApi = (path: string) => path === "/api" || path.startsWith("/api/");
 /** Runs `handler` only for non-API paths, so unknown /api routes stay JSON 404s. */

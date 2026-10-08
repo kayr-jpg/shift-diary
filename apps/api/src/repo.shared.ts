@@ -1,6 +1,9 @@
 import { trips } from "./db/schema";
 import type { StoredTrip } from "./repo";
 
+/** touchSandbox writes lastSeen at most once per this interval (sandboxes expire after 7 days). */
+export const TOUCH_INTERVAL_MS = 3_600_000;
+
 /** The StoredTrip projection of a `trips` row. */
 export const storedColumns = {
   id: trips.id,
