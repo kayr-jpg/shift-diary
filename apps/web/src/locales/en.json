@@ -88,5 +88,22 @@
     "ID_CONFLICT": "A trip with this id already exists with different data",
     "NETWORK": "Can't reach the server. Check your connection.",
     "INTERNAL": "Server error. Please try again later."
+  },
+  "form": {
+    "open": "Add trip",
+    "title": "New trip",
+    "close": "Close",
+    "start": "Start",
+    "end": "End",
+    "amount": "Amount",
+    "commission": "Commission",
+    "payment": "Payment",
+    "submit": "Save",
+    "submitting": "Saving…",
+    "retry": "Retry"
+  },
+  "toasts": {
+    "tripAdded": "Trip added",
+    "replayNoDuplicate": "Sent again — no duplicate created"
   }
 }

@@ -8,6 +8,7 @@ import { SummaryCard } from "./components/SummaryCard";
 import { TripList } from "./components/TripList";
 import { LangToggle } from "./components/LangToggle";
 import { Toasts } from "./components/Toasts";
+import { AddTripSheet } from "./components/AddTripSheet";
 import { ChevronLeft, ChevronRight } from "./components/Icons";
 
 /** Today if it has trips, else the latest day with trips, else today. */
@@ -91,6 +92,7 @@ export default function App() {
   const [hashDate, setDate] = useHashDate();
   const days = useDays();
   const today = todayKz();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const date = hashDate ?? (days.isSuccess ? pickInitialDate(days.data, today) : days.isError ? today : null);
 
@@ -145,6 +147,18 @@ export default function App() {
           </>
         )}
       </main>
+      {date !== null && (
+        <>
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="fixed bottom-5 right-4 z-30 min-h-14 rounded-full bg-emerald-700 px-7 text-lg font-bold text-white shadow-lg hover:bg-emerald-800 active:bg-emerald-900"
+          >
+            {t("form.open")}
+          </button>
+          <AddTripSheet open={sheetOpen} date={date} onClose={() => setSheetOpen(false)} />
+        </>
+      )}
       <Toasts />
     </div>
   );
