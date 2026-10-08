@@ -1,6 +1,9 @@
 name: CI
 on:
   pull_request:
+  # Also on main, so the README badge reflects the default branch.
+  push:
+    branches: [main]
 jobs:
   ci:
     runs-on: ubuntu-latest
