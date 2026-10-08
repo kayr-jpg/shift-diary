@@ -18,7 +18,7 @@ const ISO_RE =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-](\d{2}):(\d{2}))$/;
 
 /** Parses an ISO 8601 date-time with explicit offset; returns epoch ms or null. */
-function parseTime(value: string): number | null {
+export function parseIsoInstant(value: string): number | null {
   const m = ISO_RE.exec(value);
   if (!m) return null;
   const [, y, mo, d, h, mi, s, , oh, om] = m;
@@ -35,7 +35,7 @@ function parseTime(value: string): number | null {
 
 const time = z
   .string({ error: "TIME_INVALID" })
-  .refine((v) => parseTime(v) !== null, { error: "TIME_INVALID" });
+  .refine((v) => parseIsoInstant(v) !== null, { error: "TIME_INVALID" });
 
 const baseShape = {
   id: z.string({ error: "ID_INVALID" }).regex(/^[A-Za-z0-9_-]{1,64}$/, { error: "ID_INVALID" }),
@@ -56,8 +56,8 @@ const baseShape = {
 // `when` makes the cross-field checks run even if an unrelated field failed.
 export const TripSchema = z.object(baseShape).check(
   z.superRefine((trip, ctx) => {
-    const start = typeof trip.start === "string" ? parseTime(trip.start) : null;
-    const end = typeof trip.end === "string" ? parseTime(trip.end) : null;
+    const start = typeof trip.start === "string" ? parseIsoInstant(trip.start) : null;
+    const end = typeof trip.end === "string" ? parseIsoInstant(trip.end) : null;
     if (start !== null && end !== null) {
       if (end <= start) {
         ctx.addIssue({ code: "custom", path: ["end"], message: "END_BEFORE_START" });
