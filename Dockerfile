@@ -3,7 +3,10 @@ ARG NODE_IMAGE=node:22.22-bookworm-slim
 
 # ---- base: node + pinned pnpm (matches root package.json packageManager) ----
 FROM ${NODE_IMAGE} AS base
-RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@12.10.1 --activate
+# corepack is pinned: the one bundled with Node 22 can't verify current npm signing keys, and an
+# unpinned @latest could later require a newer Node than the base image (0.36.0 needs ^22.22.2).
+ARG COREPACK_VERSION=0.36.0
+RUN npm install -g corepack@${COREPACK_VERSION} && corepack enable && corepack prepare pnpm@12.10.1 --activate
 WORKDIR /app
 
 # ---- manifests: only what pnpm needs to resolve the workspace (layer cache) ----
