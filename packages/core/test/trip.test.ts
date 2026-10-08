@@ -135,3 +135,27 @@ describe("validateTrip", () => {
     expect(r).toEqual({ ok: true, trip: base });
   });
 });
+
+describe("cross-field checks despite unrelated errors", () => {
+  const t = (o: object) => codes({ ...base, ...o });
+  it("a: invalid payment + end before start", () => {
+    expect(
+      codes({ id: "a", start: "2026-10-01T10:00:00+05:00", end: "2026-10-01T09:00:00+05:00", amount: 100, commission: 10, payment: "x" }),
+    ).toEqual(["end:END_BEFORE_START", "payment:PAYMENT_INVALID"]);
+  });
+  it("b: invalid id + too long", () => {
+    expect(t({ id: "", end: "2026-10-01T15:10:01Z" })).toEqual(["end:DURATION_TOO_LONG", "id:ID_INVALID"]);
+  });
+  it("c: amount abc", () => {
+    expect(t({ amount: "abc" })).toEqual(["amount:AMOUNT_INVALID"]);
+    expect(t({ amount: "abc", end: "2026-10-01T03:00:00Z" })).toEqual(["amount:AMOUNT_INVALID", "end:END_BEFORE_START"]);
+  });
+  it("d: commission > amount with invalid payment", () => {
+    expect(t({ amount: 100, commission: 500, payment: "x" })).toEqual(["commission:COMMISSION_INVALID", "payment:PAYMENT_INVALID"]);
+  });
+  it("e: commission check skipped when amount or commission invalid", () => {
+    expect(t({ amount: 0, commission: 5 })).toEqual(["amount:AMOUNT_INVALID"]);
+    expect(t({ amount: 100, commission: 1.5 })).toEqual(["commission:COMMISSION_INVALID"]);
+    expect(t({ amount: "abc", commission: 5 })).toEqual(["amount:AMOUNT_INVALID"]);
+  });
+});
