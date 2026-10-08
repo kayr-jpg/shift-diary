@@ -1,0 +1,50 @@
+name: Release video
+# Renders the Remotion demo (spec §11) and attaches both MP4 cuts to the published release.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @shift/e2e exec playwright install --with-deps chromium
+      # Starts the Node server (API + built web) on :8787 with a temp DB, records, stops it.
+      - run: pnpm demo:record
+      # Runs core + api + web tests and writes video/src/proof.json from their real results.
+      - run: pnpm video:proof
+      - run: pnpm video:render --skip-proof
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-video
+          path: video/out/*.mp4
+          retention-days: 7
+
+  upload:
+    needs: render
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-video
+          path: video/out
+      - name: Upload MP4s to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: gh release upload "$TAG" video/out/*.mp4 --clobber --repo "$REPO"

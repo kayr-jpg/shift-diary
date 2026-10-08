@@ -1,0 +1,24 @@
+{
+  "name": "@shift/video",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "proof": "node scripts/collect-proof.mjs",
+    "render": "node scripts/render.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.527",
+    "@remotion/google-fonts": "4.0.527",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.527"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "19.3.0",
+    "typescript": "^6.0.3"
+  }
+}
