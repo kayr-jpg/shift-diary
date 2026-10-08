@@ -132,5 +132,20 @@
       "confirm": "Are you sure?",
       "desc": "Restores the demo data and discards trips you added. Click twice."
     }
+  },
+  "receipt": {
+    "closeShift": "Close shift",
+    "title": "Shift receipt",
+    "close": "Close",
+    "share": "Share",
+    "trips": "Trips",
+    "revenue": "Revenue",
+    "commission": "Commission",
+    "net": "Take-home",
+    "cash": "Cash",
+    "card": "Card",
+    "thanks": "Thanks for the shift!",
+    "shareFailed": "Could not share the receipt",
+    "downloaded": "Receipt saved as an image"
   }
 }

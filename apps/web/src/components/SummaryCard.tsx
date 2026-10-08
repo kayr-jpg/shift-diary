@@ -1,4 +1,5 @@
 import type { Summary } from "@shift/core";
+import type { Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { formatMoney } from "../money";
 import { currentLang } from "../i18n";
@@ -38,7 +39,15 @@ function SplitBar({ cash, card }: { cash: number; card: number }) {
   );
 }
 
-export function SummaryCard({ summary }: { summary: Summary }) {
+export function SummaryCard({
+  summary,
+  onCloseShift,
+  closeShiftRef,
+}: {
+  summary: Summary;
+  onCloseShift?: () => void;
+  closeShiftRef?: Ref<HTMLButtonElement>;
+}) {
   const { t } = useTranslation();
   return (
     <section
@@ -72,6 +81,16 @@ export function SummaryCard({ summary }: { summary: Summary }) {
         </div>
       </dl>
       <SplitBar cash={summary.cash} card={summary.card} />
+      {onCloseShift && summary.tripCount > 0 && (
+        <button
+          ref={closeShiftRef}
+          type="button"
+          onClick={onCloseShift}
+          className="mt-5 min-h-12 w-full rounded-full bg-zinc-900 px-6 font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          {t("receipt.closeShift")}
+        </button>
+      )}
     </section>
   );
 }
