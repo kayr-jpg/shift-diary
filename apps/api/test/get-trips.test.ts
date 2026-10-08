@@ -47,6 +47,22 @@ describe("GET /api/trips", () => {
     expect(body.trips[0]?.warnings).toEqual([{ code: "OVERLAP", with: "late" }]);
   });
 
+  it("flags overlap with a trip starting the next day, symmetrically; back-to-back is not flagged", async () => {
+    const { req, post } = await makeTestApp();
+    const t = (id: string, start: string, end: string) => ({ id, start, end, amount: 100, commission: 10, payment: "cash" });
+    await post(t("late", "2026-10-01T23:50:00+05:00", "2026-10-02T00:30:00+05:00"));
+    await post(t("early", "2026-10-02T00:10:00+05:00", "2026-10-02T00:20:00+05:00"));
+    await post(t("touch", "2026-10-02T00:30:00+05:00", "2026-10-02T00:40:00+05:00"));
+    const d1 = (await (await req("/api/trips?date=2026-10-01")).json()) as Body;
+    expect(d1.trips.map((x) => x.id)).toEqual(["late"]);
+    expect(d1.trips[0]?.warnings).toEqual([{ code: "OVERLAP", with: "early" }]);
+    expect(d1.summary.tripCount).toBe(1);
+    const d2 = (await (await req("/api/trips?date=2026-10-02")).json()) as Body;
+    const by = Object.fromEntries(d2.trips.map((x) => [x.id as string, x]));
+    expect(by.early?.warnings).toEqual([{ code: "OVERLAP", with: "late" }]);
+    expect(by.touch).not.toHaveProperty("warnings");
+  });
+
   it.each([["missing", ""], ["2026-02-30", "?date=2026-02-30"], ["26-10-01", "?date=26-10-01"], ["2026-13-01", "?date=2026-13-01"], ["empty", "?date="]])(
     "invalid date (%s) → 422 DATE_INVALID",
     async (_n, qs) => {

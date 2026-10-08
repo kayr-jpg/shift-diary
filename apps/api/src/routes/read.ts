@@ -14,9 +14,9 @@ export function readRoutes({ repo }: { repo: TripRepository }) {
     if (!isValidDate(date)) return c.json({ errors: [{ field: "date", code: "DATE_INVALID" }] }, 422);
 
     const { from, to } = dayRange(date);
-    // Trips last at most 12h, so a neighbour that overlaps one of today's starts within 12h before it.
-    const around = await repo.listRange(c.var.sandboxId, from - HALF_DAY_MS, to);
-    const today = around.filter((t) => t.startUtc >= from);
+    // Trips last at most 12h, so overlapping neighbours start within 12h either side of the day.
+    const around = await repo.listRange(c.var.sandboxId, from - HALF_DAY_MS, to + HALF_DAY_MS);
+    const today = around.filter((t) => t.startUtc >= from && t.startUtc < to);
     const out = today.map((t) => {
       const overlaps = findOverlaps(t, around);
       return {
