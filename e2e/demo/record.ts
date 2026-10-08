@@ -5,8 +5,7 @@
  *   pnpm demo:record    # → video/public/footage.webm + video/public/footage-meta.json
  *
  * With BASE_URL set, the script records against that URL. Without it, it starts the Node server
- * (the `start:node` script of @shift/api) on :8787 with a fresh temporary SQLite database — the same
- * way the e2e config does — waits for /api/health, and stops it at the end.
+ * on :8787 with a fresh temporary SQLite database (see ./server.ts) and stops it at the end.
  *
  * The pauses are deliberate: the footage is meant to be watched by a human. footage-meta.json holds
  * the duration and the time of each beat (seconds from the start of the video) so the Remotion
@@ -14,14 +13,12 @@
  *
  * Run directly with Node (type stripping): `node demo/record.ts` from e2e/.
  */
-import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { chromium, expect, type Locator, type Page } from "@playwright/test";
+import { repoRoot, sleep, startServer, stopServer } from "./server.ts";
 
-const PORT = 8787;
-const repoRoot = resolve(import.meta.dirname, "../..");
 const outDir = join(repoRoot, "video/public");
 const rawDir = join(tmpdir(), `shift-demo-${process.pid}-${Date.now()}`);
 /**
@@ -35,51 +32,6 @@ const SCALE = 2;
 const VIDEO_SIZE = { width: PHONE.width * SCALE, height: PHONE.height * SCALE };
 
 type BeatId = "summary" | "nextDay" | "backDay" | "addTrip" | "newTotals" | "hood" | "replay" | "conflict" | "kz" | "ru" | "receipt";
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-async function waitForHealth(url: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${url}/api/health`);
-      if (res.ok) return;
-    } catch {
-      // not up yet
-    }
-    await sleep(300);
-  }
-  throw new Error(`server at ${url} did not become healthy within ${timeoutMs} ms`);
-}
-
-async function startServer(): Promise<{ url: string; child: ChildProcess; dbPath: string }> {
-  if (!existsSync(join(repoRoot, "apps/web/dist/index.html"))) {
-    throw new Error("apps/web/dist is missing: run `pnpm build` before `pnpm demo:record`.");
-  }
-  const dbPath = join(tmpdir(), `shift-demo-${process.pid}-${Date.now()}.db`);
-  // Same command as `pnpm --filter @shift/api start:node`, minus the pnpm wrapper (which reports
-  // the SIGTERM we send at the end as a failed run).
-  const child = spawn(join(repoRoot, "apps/api/node_modules/.bin/tsx"), ["src/node.ts"], {
-    cwd: join(repoRoot, "apps/api"),
-    env: { ...process.env, PORT: String(PORT), DB_PATH: dbPath },
-    stdio: ["ignore", "inherit", "inherit"],
-    detached: true,
-  });
-  const url = `http://localhost:${PORT}`;
-  await waitForHealth(url, 60_000);
-  return { url, child, dbPath };
-}
-
-async function stopServer(child: ChildProcess): Promise<void> {
-  if (child.pid === undefined || child.exitCode !== null) return;
-  const exited = new Promise<void>((r) => child.once("exit", () => r()));
-  try {
-    process.kill(-child.pid, "SIGTERM"); // the whole group: tsx → node
-  } catch {
-    child.kill("SIGTERM");
-  }
-  await Promise.race([exited, sleep(5000)]);
-}
 
 /** Lays the page out at phone width (see PHONE above) and keeps the phone-size type scale. */
 function phoneZoom(scale: number): void {
@@ -121,7 +73,7 @@ function tapIndicator(): void {
 
 async function main(): Promise<void> {
   const external = process.env.BASE_URL;
-  const server = external ? undefined : await startServer();
+  const server = external ? undefined : await startServer("demo:record");
   const baseURL = external ?? server!.url;
   console.log(`demo:record → ${baseURL}`);
 
@@ -160,10 +112,7 @@ async function main(): Promise<void> {
   } finally {
     await browser.close();
     rmSync(rawDir, { recursive: true, force: true });
-    if (server) {
-      await stopServer(server.child);
-      for (const suffix of ["", "-wal", "-shm"]) rmSync(server.dbPath + suffix, { force: true });
-    }
+    if (server) await stopServer(server);
   }
 }
 

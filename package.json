@@ -13,6 +13,7 @@
     "e2e": "pnpm --filter @shift/e2e test",
     "smoke": "test -n \"$BASE_URL\" || { echo 'pnpm smoke: BASE_URL is not set (e.g. BASE_URL=https://shift-diary.<account>.workers.dev pnpm smoke)' >&2; exit 1; } && pnpm --filter @shift/e2e exec playwright test smoke --project=desktop",
     "demo:record": "pnpm --filter @shift/e2e demo:record",
+    "docs:screenshots": "pnpm --filter @shift/e2e docs:screenshots",
     "video:proof": "pnpm --filter @shift/video proof",
     "video:studio": "pnpm --filter @shift/video studio",
     "video:render": "pnpm --filter @shift/video render"

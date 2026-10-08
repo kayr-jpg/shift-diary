@@ -7,7 +7,8 @@
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
     "install-browsers": "playwright install chromium webkit",
-    "demo:record": "node demo/record.ts"
+    "demo:record": "node demo/record.ts",
+    "docs:screenshots": "node demo/screenshots.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
