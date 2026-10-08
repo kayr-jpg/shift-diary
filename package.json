@@ -7,8 +7,9 @@
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",
-    "test": "pnpm -r --if-present test",
-    "build": "pnpm -r --if-present build"
+    "test": "pnpm -r --if-present --filter \"!@shift/e2e\" test",
+    "build": "pnpm -r --if-present build",
+    "e2e": "pnpm --filter @shift/e2e test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

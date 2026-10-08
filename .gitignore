@@ -5,3 +5,6 @@ dist
 *.db
 coverage/
 .DS_Store
+test-results/
+playwright-report/
+blob-report/
