@@ -2,30 +2,7 @@ import { and, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { sandboxes, trips } from "./db/schema";
 import type { StoredTrip, TripRepository } from "./repo";
-
-const storedColumns = {
-  id: trips.id,
-  startUtc: trips.startUtc,
-  endUtc: trips.endUtc,
-  startOffset: trips.startOffset,
-  endOffset: trips.endOffset,
-  amount: trips.amount,
-  commission: trips.commission,
-  payment: trips.payment,
-};
-
-const row = (sandboxId: string, t: StoredTrip, now: number) => ({
-  sandboxId,
-  id: t.id,
-  startUtc: t.startUtc,
-  endUtc: t.endUtc,
-  startOffset: t.startOffset,
-  endOffset: t.endOffset,
-  amount: t.amount,
-  commission: t.commission,
-  payment: t.payment,
-  createdAt: now,
-});
+import { storedColumns, tripRow } from "./repo.shared";
 
 export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
   // Per-connection setting in SQLite; make FK enforcement a property of the repo, not of callers.
@@ -37,7 +14,7 @@ export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
     seed: StoredTrip[],
     now: number,
   ) => {
-    for (const t of seed) tx.insert(trips).values(row(id, t, now)).run();
+    for (const t of seed) tx.insert(trips).values(tripRow(id, t, now)).run();
   };
 
   return {
@@ -66,7 +43,7 @@ export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
       // concurrent duplicate a no-op, and `changes` tells this caller whether it won.
       const { changes } = db
         .insert(trips)
-        .values(row(sandboxId, trip, now))
+        .values(tripRow(sandboxId, trip, now))
         .onConflictDoNothing({ target: [trips.sandboxId, trips.id] })
         .run();
       const stored = db
