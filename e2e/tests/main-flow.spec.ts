@@ -65,6 +65,29 @@ test.describe("main flow", () => {
     await expect(page.getByTestId("trip-time")).toHaveText(["08:10–08:32", "09:05–09:20", "10:00–10:30"]);
   });
 
+  test("a trip crossing midnight is saved and listed on its start day only", async ({ page }) => {
+    await gotoDay(page, SEED_DAY);
+    await page.getByRole("button", { name: "Добавить поездку" }).click();
+    const sheet = page.getByRole("dialog", { name: "Новая поездка" });
+    await sheet.getByLabel("Начало").fill("23:40");
+    await sheet.getByLabel("Окончание").fill("00:15");
+    await expect(sheet.getByTestId("end-next-day")).toHaveText("+1 день");
+    await sheet.getByLabel("Сумма").fill("2000");
+    await sheet.getByRole("button", { name: "Сохранить" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByTestId("toasts")).toContainText("Поездка добавлена");
+    await expect(tripCount(page)).toHaveText("Поездок: 3");
+    await expect(page.getByTestId("trip-time")).toHaveText(["08:10–08:32", "09:05–09:20", "23:40–00:15"]);
+    // 2000 cash with the automatic 15% commission (300): net +1700.
+    await expect(page.getByTestId("net")).toHaveText(money(SEED.net + 1700));
+
+    // The next day keeps only its own seed trip (start-day rule).
+    await page.getByRole("button", { name: "Следующий день" }).click();
+    await expect(page).toHaveURL(/#2026-10-02$/);
+    await expect(page.getByTestId("trip-time")).toHaveText(["08:00–08:30"]);
+    await expect(page.getByTestId("net")).toHaveText(money(2380));
+  });
+
   test("an overlapping trip shows the overlap badge", async ({ page }) => {
     await gotoDay(page, SEED_DAY);
     await expect(page.getByText("Пересечение")).toHaveCount(0);
