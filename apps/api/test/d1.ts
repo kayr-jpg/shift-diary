@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { D1Database } from "@cloudflare/workers-types";
 import { Miniflare } from "miniflare";
-import { afterAll } from "vitest";
+import { afterAll, beforeAll } from "vitest";
 
 const migrationsDir = fileURLToPath(new URL("../migrations", import.meta.url));
 
@@ -25,6 +25,11 @@ export function useD1(): { fresh: () => Promise<D1Database> } {
     d1Databases: { DB: "test" },
   });
   let migrated = false;
+  // Booting workerd can take several seconds on a loaded machine; do it in a hook with its own
+  // generous timeout instead of inside the first test's 5 s budget.
+  beforeAll(async () => {
+    await mf.ready;
+  }, 60_000);
   afterAll(() => mf.dispose());
 
   return {
