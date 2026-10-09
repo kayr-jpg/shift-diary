@@ -1,6 +1,6 @@
 # Дневник смен водителя
 
-<!-- TODO(Kair): после создания репозитория заменить <user> в ссылках внизу файла (бейджи, видео, репозиторий); после первого деплоя — <your-subdomain> в ссылке [live]. Все ссылки-плейсхолдеры собраны в конце файла. -->
+<!-- TODO(Kair): после создания репозитория (сделано: <user> заменён на kayr-jpg) ссылки внизу файла (бейджи, видео, репозиторий); после первого деплоя — <your-subdomain> в ссылке [live]. Все ссылки-плейсхолдеры собраны в конце файла. -->
 
 [![CI][ci-badge]][ci] [![Deploy][deploy-badge]][deploy]
 
@@ -327,11 +327,11 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 - **Нет ограничения частоты запросов.** Каждый новый посетитель без cookie создаёт песочницу (15 вставок: сама песочница и 14 демо-поездок; D1 считает и записи индексов), поэтому скрипт может выбрать бесплатную квоту записей D1. Перед тем как делиться публичным URL, включите rate limiting: правило WAF Rate Limiting в Cloudflare (например, на `/api/*`) или биндинг Workers Rate Limiting с ключом по `cf-connecting-ip`. Биндинг в этом репозитории не реализован.
 - `vite-plugin-pwa` закреплён на 1.3.0: версия 2.0.0 вышла меньше двух недель назад.
 
-<!-- Ссылки. TODO(Kair): заменить <user> на GitHub-аккаунт, <your-subdomain> — на поддомен workers.dev (тот же, что в video/src/config.ts). -->
+<!-- Ссылки. TODO(Kair): <your-subdomain> — на поддомен workers.dev (тот же, что в video/src/config.ts). -->
 [live]: <https://shift-diary.\<your-subdomain\>.workers.dev>
-[ci]: <https://github.com/\<user\>/shift-diary/actions/workflows/ci.yml>
-[ci-badge]: <https://github.com/\<user\>/shift-diary/actions/workflows/ci.yml/badge.svg>
-[deploy]: <https://github.com/\<user\>/shift-diary/actions/workflows/deploy.yml>
-[deploy-badge]: <https://github.com/\<user\>/shift-diary/actions/workflows/deploy.yml/badge.svg>
-[video]: <https://github.com/\<user\>/shift-diary/releases/latest/download/shift-diary-1080x1920.mp4>
-[video-wide]: <https://github.com/\<user\>/shift-diary/releases/latest/download/shift-diary-1920x1080.mp4>
+[ci]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/ci.yml>
+[ci-badge]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/ci.yml/badge.svg>
+[deploy]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/deploy.yml>
+[deploy-badge]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/deploy.yml/badge.svg>
+[video]: <https://github.com/kayr-jpg/shift-diary/releases/latest/download/shift-diary-1080x1920.mp4>
+[video-wide]: <https://github.com/kayr-jpg/shift-diary/releases/latest/download/shift-diary-1920x1080.mp4>

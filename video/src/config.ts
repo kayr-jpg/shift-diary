@@ -7,6 +7,6 @@
 export const LIVE_URL = "https://shift-diary.<your-subdomain>.workers.dev";
 
 // TODO(Kair): replace the angle-bracket placeholder with the GitHub account that hosts the repo.
-export const REPO_URL = "github.com/<user>/shift-diary";
+export const REPO_URL = "github.com/kayr-jpg/shift-diary";
 
 export const AUTHOR = "Kair";
