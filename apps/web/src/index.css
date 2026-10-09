@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--color-zinc-50);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: var(--color-zinc-950);
+  }
+}
+
+/* Branded focus ring for keyboard users: 2px, offset 2px, readable on light and dark surfaces.
+   In the base layer so a component's own focus utilities (e.g. inputs' ring) still win. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-emerald-700);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :focus-visible {
+      outline-color: var(--color-emerald-300);
+    }
+  }
+}
+
+/* Day panel enter (DaySwipe): slide from the side of travel and fade in, 200 ms. */
+@keyframes day-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--day-dir, 1) * 48px));
+  }
+}
+
+.day-slide-in {
+  animation: day-slide-in 200ms ease-out;
+}
+
+/* Motion hygiene: honour the OS setting for every CSS transition and animation too. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

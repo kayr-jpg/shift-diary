@@ -1,0 +1,156 @@
+{
+  "app": {
+    "title": "Driver Shift Diary"
+  },
+  "nav": {
+    "prev": "Previous day",
+    "next": "Next day",
+    "today": "Today",
+    "strip": "Choose a day",
+    "hasTrips": "has trips"
+  },
+  "date": {
+    "long": "{{month}} {{day}}",
+    "weekday": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    },
+    "month": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    }
+  },
+  "summary": {
+    "title": "Day summary",
+    "net": "Take-home",
+    "revenue": "Revenue",
+    "commission": "Commission",
+    "trips": "Trips: {{count}}",
+    "split": "Cash and card",
+    "share": "{{amount}} · {{percent}}%"
+  },
+  "payment": {
+    "cash": "Cash",
+    "card": "Card"
+  },
+  "trips": {
+    "title": "Trips",
+    "overlap": "Overlap",
+    "overlapWith": "Overlaps with trip {{ids}}"
+  },
+  "duration": {
+    "minutes": "{{m}} min",
+    "hours": "{{h}} h",
+    "hoursMinutes": "{{h}} h {{m}} min"
+  },
+  "empty": {
+    "title": "No trips",
+    "body": "No trips on this day. Pick another day — or enjoy the rest, you earned it."
+  },
+  "state": {
+    "loading": "Loading…",
+    "error": "Couldn't load the data",
+    "retry": "Retry"
+  },
+  "lang": {
+    "label": "Language",
+    "ru": "RU",
+    "kk": "ҚАЗ",
+    "en": "EN"
+  },
+  "toast": {
+    "dismiss": "Dismiss"
+  },
+  "errors": {
+    "ID_INVALID": "Invalid trip id",
+    "TIME_INVALID": "Invalid time",
+    "END_BEFORE_START": "End must be after start",
+    "DURATION_TOO_LONG": "A trip can't last longer than 12 hours",
+    "AMOUNT_INVALID": "Amount must be a positive whole number",
+    "COMMISSION_INVALID": "Commission must be a whole number from 0 to the trip amount",
+    "PAYMENT_INVALID": "Choose a payment method: cash or card",
+    "DATE_INVALID": "Invalid date",
+    "ID_CONFLICT": "A trip with this id already exists with different data",
+    "NETWORK": "Can't reach the server. Check your connection.",
+    "INTERNAL": "Server error. Please try again later."
+  },
+  "form": {
+    "open": "Add trip",
+    "title": "New trip",
+    "close": "Close",
+    "start": "Start",
+    "end": "End",
+    "amount": "Amount",
+    "commission": "Commission",
+    "payment": "Payment",
+    "submit": "Save",
+    "submitting": "Saving…",
+    "retry": "Retry"
+  },
+  "toasts": {
+    "tripAdded": "Trip added",
+    "replayNoDuplicate": "Sent again — no duplicate created"
+  },
+  "hood": {
+    "title": "Under the hood",
+    "intro": "Live API requests: see how the server protects against duplicates.",
+    "noTrips": "No trips on this day — add a trip first.",
+    "request": "Request",
+    "response": "Response",
+    "running": "Running…",
+    "tripsOnDay": "Trips on this day: {{before}} → {{after}}",
+    "translated": "Errors explained",
+    "repeat": {
+      "label": "Repeat last trip",
+      "desc": "Sends the same trip again. No duplicate: the server answers 200 and flags the replay."
+    },
+    "conflict": {
+      "label": "Same id, different amount",
+      "desc": "Same id but the amount is 100 higher. The server rejects it with 409 and shows the difference."
+    },
+    "invalid": {
+      "label": "Invalid trip",
+      "desc": "Deliberately bad data. The server answers 422 and lists every error at once."
+    },
+    "reset": {
+      "label": "Reset demo",
+      "confirm": "Are you sure?",
+      "desc": "Restores the demo data and discards trips you added. Click twice."
+    }
+  },
+  "receipt": {
+    "closeShift": "Close shift",
+    "title": "Shift receipt",
+    "close": "Close",
+    "share": "Share",
+    "trips": "Trips",
+    "revenue": "Revenue",
+    "commission": "Commission",
+    "net": "Take-home",
+    "cash": "Cash",
+    "card": "Card",
+    "thanks": "Thanks for the shift!",
+    "shareFailed": "Could not share the receipt",
+    "downloaded": "Receipt saved as an image",
+    "loadFailed": "Could not open the receipt. Try again"
+  },
+  "offline": {
+    "banner": "No connection. Showing the last loaded data.",
+    "addDisabled": "Adding a trip needs a connection"
+  }
+}
