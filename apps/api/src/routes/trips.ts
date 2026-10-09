@@ -1,4 +1,4 @@
-import { Hono, type Context } from "hono";
+import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Env } from "../env";
 import { diffCanonical, findOverlaps, validateTrip, type Trip } from "@shift/core";
@@ -7,7 +7,7 @@ import { renderInstant, renderTrip, toStoredTrip } from "../render";
 
 const DAY_MS = 86_400_000;
 
-export type TripRoutesDeps = { repo: TripRepository; now: () => number };
+export type TripRoutesDeps = { repo: TripRepository; now: () => number; sandbox: MiddlewareHandler<Env> };
 
 /** Parsed JSON body, or `undefined` when the body is not valid JSON (validation then reports every field). */
 async function readJson(c: Context): Promise<unknown> {
@@ -29,12 +29,14 @@ function conflictDiff(stored: StoredTrip, sent: Trip, sentStored: StoredTrip) {
 
 const MAX_BODY_BYTES = 16 * 1024;
 
-export function tripRoutes({ repo, now }: TripRoutesDeps): Hono<Env> {
+export function tripRoutes({ repo, now, sandbox }: TripRoutesDeps): Hono<Env> {
   const app = new Hono<Env>();
 
   app.post(
     "/",
+    // Reject oversize bodies before the sandbox middleware can create (and seed) a sandbox.
     bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ code: "BODY_TOO_LARGE" }, 413) }),
+    sandbox,
     async (c) => {
     const sandboxId = c.var.sandboxId;
 

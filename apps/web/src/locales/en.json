@@ -95,6 +95,7 @@
     "close": "Close",
     "start": "Start",
     "end": "End",
+    "nextDay": "+1 day",
     "amount": "Amount",
     "commission": "Commission",
     "payment": "Payment",

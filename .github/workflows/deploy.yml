@@ -1,0 +1,132 @@
+# Deploys Shift Diary (Worker + static assets + D1) to Cloudflare on every push to main,
+# then runs the Playwright smoke test (e2e/tests/smoke.spec.ts) against production.
+#
+# One-time setup (manual, done by the repo owner — never commit tokens):
+#   1. Create the D1 database:   pnpm exec wrangler d1 create shift-diary
+#   2. Put the printed database_id into wrangler.jsonc (replace REPLACE_WITH_D1_ID) and commit it.
+#   3. GitHub → Settings → Secrets and variables → Actions → Secrets:
+#        CLOUDFLARE_API_TOKEN   (API token with "Edit Cloudflare Workers" + "D1:Edit" permissions)
+#        CLOUDFLARE_ACCOUNT_ID
+#   4. Same page → Variables: PRODUCTION_URL = https://shift-diary.<your-subdomain>.workers.dev
+#      (no trailing slash; the URL is printed by the first `wrangler deploy`).
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # workflow_dispatch can be started from any branch; production only ever gets main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      # Fail fast, before installing anything, when the one-time setup is incomplete.
+      - name: Check one-time setup
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=0
+          if grep -q 'REPLACE_WITH_D1_ID' wrangler.jsonc; then
+            echo "::error file=wrangler.jsonc::database_id is still REPLACE_WITH_D1_ID. Run 'pnpm exec wrangler d1 create shift-diary' once and commit the printed database_id (see the header of .github/workflows/deploy.yml)."
+            missing=1
+          fi
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "::error::The PRODUCTION_URL Actions variable is not set (Settings → Secrets and variables → Actions → Variables), e.g. https://shift-diary.<subdomain>.workers.dev"
+            missing=1
+          fi
+          # Only emptiness is checked; the values are never printed.
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The $name Actions secret is not set (Settings → Secrets and variables → Actions → Secrets)."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      - name: Typecheck and unit tests
+        run: pnpm typecheck && pnpm test
+      - run: pnpm build
+
+      - name: Apply D1 migrations
+        run: pnpm exec wrangler d1 migrations apply DB --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy Worker
+        # Context values reach the shell only through env, never interpolated into the script.
+        run: >-
+          pnpm exec wrangler deploy
+          --var "VERSION:${REF_NAME}-${RUN_NUMBER}"
+          --var "COMMIT:${COMMIT_SHA}"
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT_SHA: ${{ github.sha }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Wait for the new version to be live
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          # Deadline-based so the message below is true: at most 60 s plus one last request (≤ 5 s).
+          deadline=$((SECONDS + 60))
+          i=0
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            i=$((i + 1))
+            body=$(curl --silent --show-error --max-time 5 "$PRODUCTION_URL/api/health" || true)
+            if jq -e --arg c "$EXPECTED_COMMIT" '.ok == true and .commit == $c' >/dev/null 2>&1 <<< "$body"; then
+              echo "Live: $body"
+              exit 0
+            fi
+            echo "Attempt $i: not live yet ($body)"
+            sleep 2
+          done
+          echo "::error::$PRODUCTION_URL/api/health did not report commit $EXPECTED_COMMIT within 60 s ($i attempts)"
+          exit 1
+
+      - run: pnpm --filter @shift/e2e exec playwright install --with-deps chromium
+      - name: Smoke test production
+        run: pnpm smoke
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_URL }}
+
+      - name: Deployed version
+        if: always()
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: |
+          if [ -n "$PRODUCTION_URL" ]; then
+            echo "### Deployed: $PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"
+            curl --silent --show-error --max-time 5 "$PRODUCTION_URL/api/health" | tee -a "$GITHUB_STEP_SUMMARY" || true
+          fi
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 14

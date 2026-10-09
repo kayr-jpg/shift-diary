@@ -13,7 +13,8 @@
     {
       "binding": "DB",
       "database_name": "shift-diary",
-      "database_id": "REPLACE_WITH_D1_ID",
+      // Created with `wrangler d1 create shift-diary`. The id is an identifier, not a secret.
+      "database_id": "c1d9aa84-6fc0-49f6-b1d0-b7becf1857f7",
       "migrations_dir": "apps/api/migrations"
     }
   ],

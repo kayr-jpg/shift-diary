@@ -1,0 +1,51 @@
+{
+  "width": 780,
+  "height": 1688,
+  "durationSec": 32.7,
+  "beats": [
+    {
+      "id": "summary",
+      "t": 0.2
+    },
+    {
+      "id": "nextDay",
+      "t": 2.8
+    },
+    {
+      "id": "backDay",
+      "t": 4.7
+    },
+    {
+      "id": "addTrip",
+      "t": 6.4
+    },
+    {
+      "id": "newTotals",
+      "t": 11.8
+    },
+    {
+      "id": "hood",
+      "t": 15
+    },
+    {
+      "id": "replay",
+      "t": 17.2
+    },
+    {
+      "id": "conflict",
+      "t": 21.2
+    },
+    {
+      "id": "kz",
+      "t": 26.1
+    },
+    {
+      "id": "ru",
+      "t": 28.2
+    },
+    {
+      "id": "receipt",
+      "t": 29.5
+    }
+  ]
+}

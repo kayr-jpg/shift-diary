@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { sandboxes, trips } from "./db/schema";
 import type { StoredTrip, TripRepository } from "./repo";
-import { storedColumns, tripRow } from "./repo.shared";
+import { TOUCH_INTERVAL_MS, storedColumns, tripRow } from "./repo.shared";
 
 export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
   // Per-connection setting in SQLite; make FK enforcement a property of the repo, not of callers.
@@ -35,7 +35,10 @@ export function createSqliteRepo(db: BetterSQLite3Database): TripRepository {
     },
 
     async touchSandbox(id, now) {
-      db.update(sandboxes).set({ lastSeen: now }).where(eq(sandboxes.id, id)).run();
+      db.update(sandboxes)
+        .set({ lastSeen: now })
+        .where(and(eq(sandboxes.id, id), lt(sandboxes.lastSeen, now - TOUCH_INTERVAL_MS)))
+        .run();
     },
 
     async insertIfAbsent(sandboxId, trip, now) {

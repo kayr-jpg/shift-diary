@@ -108,8 +108,8 @@ export function repoContract(name: string, makeRepo: () => Promise<TripRepositor
 
     it("deleteStale removes sandboxes last seen before the cutoff, with their trips", async () => {
       const repo = await makeRepo();
-      await repo.createSandbox("old", [st("s", T0)], NOW - 10);
-      await repo.createSandbox("touched", [st("s", T0)], NOW - 10);
+      await repo.createSandbox("old", [st("s", T0)], NOW - 2 * H);
+      await repo.createSandbox("touched", [st("s", T0)], NOW - 2 * H);
       await repo.createSandbox("fresh", [], NOW);
       await repo.touchSandbox("touched", NOW);
       expect(await repo.deleteStale(NOW - 5)).toBe(1);
@@ -118,6 +118,21 @@ export function repoContract(name: string, makeRepo: () => Promise<TripRepositor
       expect(await repo.sandboxExists("touched")).toBe(true);
       expect(await repo.listAll("touched")).toHaveLength(1);
       expect(await repo.sandboxExists("fresh")).toBe(true);
+    });
+
+    it("touchSandbox is throttled: within an hour lastSeen is not advanced, after an hour it is", async () => {
+      const repo = await makeRepo();
+      await repo.createSandbox("recent", [], NOW);
+      await repo.createSandbox("later", [], NOW);
+      await repo.touchSandbox("recent", NOW + H / 2);
+      await repo.touchSandbox("recent", NOW + H);
+      await repo.touchSandbox("later", NOW + H + 1);
+      // "recent" still has lastSeen = NOW, so a cutoff just after NOW removes it; "later" moved on.
+      expect(await repo.deleteStale(NOW + 1)).toBe(1);
+      expect(await repo.sandboxExists("recent")).toBe(false);
+      expect(await repo.sandboxExists("later")).toBe(true);
+      expect(await repo.deleteStale(NOW + H)).toBe(0);
+      expect(await repo.deleteStale(NOW + H + 2)).toBe(1);
     });
 
     it("deleteStale returns 0 when nothing is stale", async () => {

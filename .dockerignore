@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+.git
+.github
+.superpowers
+.wrangler
+docs
+e2e/playwright-report
+e2e/test-results
+**/coverage
+*.db
+*.db-*
+.DS_Store
+.env*

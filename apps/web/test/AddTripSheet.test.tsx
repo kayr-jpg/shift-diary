@@ -175,6 +175,73 @@ describe("AddTripSheet", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("a trip crossing midnight (23:40 → 00:15) posts its end on the next day with +05:00 and shows +1 day", async () => {
+    const { user } = await openSheet();
+    times("23:40", "00:15");
+    expect(screen.getByTestId("end-next-day").textContent).toBe(ru.form.nextDay);
+    expect(field(ru.form.end).getAttribute("aria-invalid")).toBeNull();
+    expect(field(ru.form.end).getAttribute("aria-describedby")).toBe(screen.getByTestId("end-next-day").id);
+    await user.type(field(ru.form.amount), "2000");
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatchObject({
+      start: "2026-10-01T23:40:00+05:00",
+      end: "2026-10-02T00:15:00+05:00",
+      amount: 2000,
+      commission: 300,
+    });
+  });
+
+  it("rolls over month ends by calendar arithmetic, not the device clock", async () => {
+    render(
+      <QueryClientProvider client={createQueryClient({ retry: false })}>
+        <AddTripSheet open date="2026-12-31" onClose={() => {}} />
+      </QueryClientProvider>,
+    );
+    times("22:00", "01:30");
+    fireEvent.change(field(ru.form.amount), { target: { value: "900" } });
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ start: "2026-12-31T22:00:00+05:00", end: "2027-01-01T01:30:00+05:00" });
+  });
+
+  it("10:00 → 09:00 is a typo, not a night trip: END_BEFORE_START, no +1 day, nothing sent", async () => {
+    const { user } = await openSheet();
+    times("10:00", "09:00");
+    await user.type(field(ru.form.amount), "1000");
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+    expect(await screen.findByText(ru.errors.END_BEFORE_START)).toBeTruthy();
+    expect(screen.queryByTestId("end-next-day")).toBeNull();
+    expect(posts).toHaveLength(0);
+  });
+
+  it("08:00 → 02:00 would be 18 h if rolled over: stays on the same day and reports END_BEFORE_START", async () => {
+    const { user } = await openSheet();
+    times("08:00", "02:00");
+    await user.type(field(ru.form.amount), "1000");
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+    expect(await screen.findByText(ru.errors.END_BEFORE_START)).toBeTruthy();
+    expect(screen.queryByText(ru.errors.DURATION_TOO_LONG)).toBeNull();
+    expect(screen.queryByTestId("end-next-day")).toBeNull();
+    expect(posts).toHaveLength(0);
+  });
+
+  it("equal start and end is END_BEFORE_START; exactly 12 h across midnight is allowed", async () => {
+    const { user } = await openSheet();
+    times("10:00", "10:00");
+    fireEvent.blur(field(ru.form.end));
+    expect(await screen.findByText(ru.errors.END_BEFORE_START)).toBeTruthy();
+    times("18:00", "06:00");
+    expect(screen.queryByText(ru.errors.END_BEFORE_START)).toBeNull();
+    expect(screen.getByTestId("end-next-day")).toBeTruthy();
+    await user.type(field(ru.form.amount), "1000");
+    fireEvent.click(screen.getByRole("button", { name: ru.form.submit }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ start: "2026-10-01T18:00:00+05:00", end: "2026-10-02T06:00:00+05:00" });
+  });
+
   it("renders server 422 codes inline, overriding client state", async () => {
     postHandler = () =>
       json({ errors: [{ field: "commission", code: "COMMISSION_INVALID" }, { field: "end", code: "DURATION_TOO_LONG" }] }, 422);

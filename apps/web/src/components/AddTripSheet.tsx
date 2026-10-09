@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { validateTrip, type FieldError, type Trip } from "@shift/core";
 import { api, NetworkError } from "../api";
 import { dayKey, daysKey } from "../hooks";
+import { addDays } from "../time";
 import { pushToast } from "../toasts";
 import { CloseIcon } from "./Icons";
 
@@ -23,8 +24,27 @@ export function generateTripId(): string {
   return `t_${Date.now().toString(36)}_${rand}`;
 }
 
-/** "HH:mm" on the viewed date at +05:00, or "" while the time is empty (validation reports TIME_INVALID). */
+/** "HH:mm" on the given date at +05:00, or "" while the time is empty (validation reports TIME_INVALID). */
 const toIso = (date: string, hhmm: string) => (hhmm ? `${date}T${hhmm}:00+05:00` : "");
+
+const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const MAX_TRIP_MINUTES = 12 * 60;
+const minutesOf = (hhmm: string) => {
+  const m = HHMM_RE.exec(hhmm);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+/**
+ * A trip crosses midnight when its end time is not after its start time but rolling the end to
+ * the next calendar day keeps it within the 12-hour limit (23:40 → 00:15). Anything else stays on
+ * the same day, so a real typo (10:00 → 09:00) still gets END_BEFORE_START from the validator.
+ */
+export function endsNextDay(start: string, end: string): boolean {
+  const s = minutesOf(start);
+  const e = minutesOf(end);
+  if (s === null || e === null || e > s) return false;
+  return e + 24 * 60 - s <= MAX_TRIP_MINUTES;
+}
 
 const digitsOnly = (v: string) => v.replace(/\D/g, "");
 
@@ -35,11 +55,13 @@ function FieldBox({
   id,
   label,
   error,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   error: string | undefined;
+  hint?: string | undefined;
   children: ReactNode;
 }) {
   return (
@@ -48,6 +70,11 @@ function FieldBox({
         {label}
       </label>
       {children}
+      {hint && !error && (
+        <p id={`${id}-hint`} data-testid="end-next-day" className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={`${id}-err`} className="text-sm font-medium text-red-700 dark:text-red-400">
           {error}
@@ -105,11 +132,12 @@ function Sheet({ date, onClose, openerRef }: { date: string; onClose: () => void
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const nextDay = endsNextDay(start, end);
   const amountNum = amount === "" ? undefined : Number(amount);
   const payload = {
     id: tripId,
     start: toIso(date, start),
-    end: toIso(date, end),
+    end: toIso(nextDay ? addDays(date, 1) : date, end),
     amount: amountNum,
     commission: commission === "" ? 0 : Number(commission),
     payment,
@@ -239,7 +267,7 @@ function Sheet({ date, onClose, openerRef }: { date: string; onClose: () => void
                 {...aria("start", ids.start)}
               />
             </FieldBox>
-            <FieldBox id={ids.end} label={t("form.end")} error={errorFor("end")}>
+            <FieldBox id={ids.end} label={t("form.end")} error={errorFor("end")} hint={nextDay ? t("form.nextDay") : undefined}>
               <input
                 id={ids.end}
                 type="time"
@@ -250,6 +278,7 @@ function Sheet({ date, onClose, openerRef }: { date: string; onClose: () => void
                 }}
                 onBlur={() => touch("end")}
                 className={inputClass}
+                {...(nextDay && !errorFor("end") && { "aria-describedby": `${ids.end}-hint` })}
                 {...aria("end", ids.end)}
               />
             </FieldBox>

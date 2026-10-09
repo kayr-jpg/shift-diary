@@ -7,6 +7,10 @@ export type StoredTrip = CanonicalTrip & { startOffset: string; endOffset: strin
 export interface TripRepository {
   createSandbox(id: string, seed: StoredTrip[], now: number): Promise<void>;
   sandboxExists(id: string): Promise<boolean>;
+  /**
+   * Marks the sandbox as recently used. Throttled: writes only when the stored lastSeen is more
+   * than an hour older than `now`, so ordinary traffic costs no row-writes.
+   */
   touchSandbox(id: string, now: number): Promise<void>;
   /** Atomic: inserts unless (sandboxId, trip.id) exists; returns the row now stored. */
   insertIfAbsent(

@@ -3,7 +3,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import { sandboxes, trips } from "./db/schema";
 import type { StoredTrip, TripRepository } from "./repo";
-import { storedColumns, tripRow } from "./repo.shared";
+import { TOUCH_INTERVAL_MS, storedColumns, tripRow } from "./repo.shared";
 
 /**
  * TripRepository over Cloudflare D1. D1 always enforces foreign keys, and `db.batch` runs its
@@ -34,7 +34,11 @@ export function createD1Repo(d1: D1Database): TripRepository {
     },
 
     async touchSandbox(id, now) {
-      await db.update(sandboxes).set({ lastSeen: now }).where(eq(sandboxes.id, id)).run();
+      await db
+        .update(sandboxes)
+        .set({ lastSeen: now })
+        .where(and(eq(sandboxes.id, id), lt(sandboxes.lastSeen, now - TOUCH_INTERVAL_MS)))
+        .run();
     },
 
     async insertIfAbsent(sandboxId, trip, now) {

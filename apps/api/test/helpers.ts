@@ -16,13 +16,19 @@ const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url)
 
 export const NOW = Date.UTC(2026, 9, 8, 12, 0, 0);
 
-/** Fresh in-memory SQLite with migrations applied. */
-export function makeTestRepo(): TripRepository {
+/** Fresh in-memory SQLite with migrations applied, plus a raw row counter for assertions. */
+export function makeTestDb(): { repo: TripRepository; sandboxCount: () => number } {
   const sqlite = new Database(":memory:");
   sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite);
   migrate(db, { migrationsFolder });
-  return createSqliteRepo(db);
+  const sandboxCount = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM sandboxes").get() as { n: number }).n;
+  return { repo: createSqliteRepo(db), sandboxCount };
+}
+
+/** Fresh in-memory SQLite with migrations applied. */
+export function makeTestRepo(): TripRepository {
+  return makeTestDb().repo;
 }
 
 export async function makeTestApp(opts: { repo?: TripRepository; seed?: Trip[] } = {}) {

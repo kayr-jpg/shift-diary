@@ -1,0 +1,41 @@
+{
+  "command": "pnpm test",
+  "packages": [
+    {
+      "name": "@shift/core",
+      "files": 5,
+      "tests": 84,
+      "passed": 84,
+      "failed": 0,
+      "lines": [
+        "Test Files  5 passed (5)",
+        "Tests  84 passed (84)"
+      ]
+    },
+    {
+      "name": "@shift/api",
+      "files": 8,
+      "tests": 97,
+      "passed": 97,
+      "failed": 0,
+      "lines": [
+        "Test Files  8 passed (8)",
+        "Tests  97 passed (97)"
+      ]
+    },
+    {
+      "name": "@shift/web",
+      "files": 12,
+      "tests": 83,
+      "passed": 83,
+      "failed": 0,
+      "lines": [
+        "Test Files  12 passed (12)",
+        "Tests  83 passed (83)"
+      ]
+    }
+  ],
+  "total": 264,
+  "passed": 264,
+  "failed": 0
+}

@@ -40,6 +40,17 @@ describe("worker fetch", () => {
     expect(assets).not.toHaveBeenCalled();
   });
 
+  it("unknown /api/* path → JSON 404 without creating a sandbox", async () => {
+    const { env, assets } = await makeEnv();
+    const res = await call(env, "/api/nope");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ code: "NOT_FOUND" });
+    expect(res.headers.get("set-cookie")).toBeNull();
+    const rows = await env.DB.prepare("SELECT COUNT(*) AS n FROM sandboxes").first<{ n: number }>();
+    expect(rows?.n).toBe(0);
+    expect(assets).not.toHaveBeenCalled();
+  });
+
   it("hands every non-/api path to the ASSETS binding", async () => {
     const { env, assets } = await makeEnv();
     for (const path of ["/", "/day/2026-10-01", "/api"]) {
