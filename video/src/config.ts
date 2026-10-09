@@ -4,7 +4,7 @@
  */
 
 // TODO(Kair): replace with the real Workers URL after the first deploy, e.g. https://shift-diary.kair.workers.dev
-export const LIVE_URL = "https://shift-diary.<your-subdomain>.workers.dev";
+export const LIVE_URL = "https://shift-diary.shift-diary.workers.dev";
 
 // TODO(Kair): replace the angle-bracket placeholder with the GitHub account that hosts the repo.
 export const REPO_URL = "github.com/kayr-jpg/shift-diary";

@@ -1,6 +1,6 @@
 # Дневник смен водителя
 
-<!-- TODO(Kair): после создания репозитория (сделано: <user> заменён на kayr-jpg) ссылки внизу файла (бейджи, видео, репозиторий); после первого деплоя — <your-subdomain> в ссылке [live]. Все ссылки-плейсхолдеры собраны в конце файла. -->
+<!-- TODO(Kair): после создания репозитория (сделано: <user> заменён на kayr-jpg) ссылки внизу файла (бейджи, видео, репозиторий); после первого деплоя — shift-diary в ссылке [live]. Все ссылки-плейсхолдеры собраны в конце файла. -->
 
 [![CI][ci-badge]][ci] [![Deploy][deploy-badge]][deploy]
 
@@ -8,7 +8,7 @@
 
 Веб-приложение и API, которые превращают поездки водителя в сводку заработка за день: выручка, комиссия, «на руки», наличные/карта. Повторная отправка той же поездки не создаёт дубль.
 
-- **Демо:** [`https://shift-diary.<your-subdomain>.workers.dev`][live] (Cloudflare Workers + D1) <!-- TODO(Kair): живой URL появится после первого деплоя, см. «Ограничения» -->
+- **Демо:** [`https://shift-diary.shift-diary.workers.dev`][live] (Cloudflare Workers + D1)
 - **Видео (52 с):** [MP4 1080×1920][video] · [MP4 1920×1080][video-wide], прикреплены к последнему релизу <!-- TODO(Kair): файлы появятся после публикации релиза v1.0.0 (release-video.yml) -->
 - **Журнал ИИ:** [`docs/AI_LOG.md`](docs/AI_LOG.md): где ИИ ошибся, как это поймали, каким коммитом исправили
 
@@ -26,7 +26,7 @@
 
 ### Вариант 1: открыть ссылку
 
-[`https://shift-diary.<your-subdomain>.workers.dev`][live] <!-- TODO(Kair): живой URL --> Ничего ставить не нужно. Каждый посетитель получает свою «песочницу» с демо-данными: две поездки из брифа и ещё 12 поездок за 28.09–08.10.2026. Открыть день из брифа можно сразу по ссылке `/#2026-10-01`.
+[`https://shift-diary.shift-diary.workers.dev`][live] Ничего ставить не нужно. Каждый посетитель получает свою «песочницу» с демо-данными: две поездки из брифа и ещё 12 поездок за 28.09–08.10.2026. Открыть день из брифа можно сразу по ссылке `/#2026-10-01`.
 
 ### Вариант 2: Docker (одна команда)
 
@@ -86,7 +86,7 @@ pnpm dev
 
 ## API
 
-Базовый URL: `https://shift-diary.<your-subdomain>.workers.dev` <!-- TODO(Kair): живой URL --> или `http://localhost:8787` локально.
+Базовый URL: `https://shift-diary.shift-diary.workers.dev` или `http://localhost:8787` локально.
 
 | Метод | Путь | Ответ |
 |---|---|---|
@@ -242,7 +242,7 @@ pnpm typecheck && pnpm lint && pnpm test       # типы, ESLint, unit + proper
 pnpm build                                     # нужен для e2e: сервер отдаёт apps/web/dist
 pnpm --filter @shift/e2e install-browsers      # один раз: chromium + webkit
 pnpm e2e                                       # сам поднимет сервер на :8787 с временной БД
-BASE_URL=https://shift-diary.<your-subdomain>.workers.dev pnpm smoke   # smoke против прода
+BASE_URL=https://shift-diary.shift-diary.workers.dev pnpm smoke   # smoke против прода
 pnpm --filter @shift/core exec vitest run --coverage                  # покрытие (так же для @shift/api)
 ```
 
@@ -309,11 +309,11 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 ## Ограничения
 
 - **Вне рамок по спеке:** авторизация, несколько водителей, офлайн-синхронизация записей, редактирование и удаление поездок, нативные приложения.
-- **Прод ещё не развёрнут.** Живой URL, бейджи и видео в этом README пока плейсхолдеры. Код деплоя готов. Проверен только локально, в задаче 15: `wrangler dev --local` + smoke 5/5. Ни в CI, ни против прода smoke ещё не запускался. Для первого деплоя нужна разовая настройка (шаги из шапки `.github/workflows/deploy.yml`):
+- **Прод развёрнут вручную (2026-10-09).** `wrangler deploy` с версией `manual-1`; `/api/health` отвечает, сводка за 2026-10-01 верная (2 / 3 900 / 585 / 3 315 / 1 500 / 2 400), smoke-тест против прода: 5 passed. Автоматический деплой из GitHub Actions (`deploy.yml`) на GitHub ещё не запускался. Разовая настройка, уже выполненная (шаги из шапки `.github/workflows/deploy.yml`):
   1. Создать базу D1: `pnpm exec wrangler d1 create shift-diary`.
   2. Вписать выданный `database_id` в `wrangler.jsonc` вместо `REPLACE_WITH_D1_ID` и закоммитить.
   3. GitHub → Settings → Secrets and variables → Actions → **Secrets**: `CLOUDFLARE_API_TOKEN` (права «Edit Cloudflare Workers» и «D1:Edit») и `CLOUDFLARE_ACCOUNT_ID`.
-  4. Там же → **Variables**: `PRODUCTION_URL = https://shift-diary.<your-subdomain>.workers.dev`, без слэша в конце (URL печатает первый `wrangler deploy`).
+  4. Там же → **Variables**: `PRODUCTION_URL = https://shift-diary.shift-diary.workers.dev`, без слэша в конце (URL печатает первый `wrangler deploy`).
 
   После этого каждый push в `main` выполняет: миграции D1 → `wrangler deploy` → ожидание нужного `commit` в `/api/health` → smoke-тест против прода.
 - **Видео к релизу.** `release-video.yml` рендерит MP4 и прикрепляет к опубликованному релизу. Сначала замените плейсхолдеры `LIVE_URL` / `REPO_URL` в `video/src/config.ts`: иначе воркфлоу остановится. Локально видео рендерится командами `pnpm build && pnpm demo:record && pnpm video:render`.
@@ -327,8 +327,8 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 - **Нет ограничения частоты запросов.** Каждый новый посетитель без cookie создаёт песочницу (15 вставок: сама песочница и 14 демо-поездок; D1 считает и записи индексов), поэтому скрипт может выбрать бесплатную квоту записей D1. Перед тем как делиться публичным URL, включите rate limiting: правило WAF Rate Limiting в Cloudflare (например, на `/api/*`) или биндинг Workers Rate Limiting с ключом по `cf-connecting-ip`. Биндинг в этом репозитории не реализован.
 - `vite-plugin-pwa` закреплён на 1.3.0: версия 2.0.0 вышла меньше двух недель назад.
 
-<!-- Ссылки. TODO(Kair): <your-subdomain> — на поддомен workers.dev (тот же, что в video/src/config.ts). -->
-[live]: <https://shift-diary.\<your-subdomain\>.workers.dev>
+<!-- Ссылки. (поддомен workers.dev совпадает с video/src/config.ts). -->
+[live]: <https://shift-diary.shift-diary.workers.dev>
 [ci]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/ci.yml>
 [ci-badge]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/ci.yml/badge.svg>
 [deploy]: <https://github.com/kayr-jpg/shift-diary/actions/workflows/deploy.yml>
