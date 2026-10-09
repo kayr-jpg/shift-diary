@@ -1,6 +1,5 @@
 # Дневник смен водителя
 
-<!-- TODO(Kair): после создания репозитория (сделано: <user> заменён на kayr-jpg) ссылки внизу файла (бейджи, видео, репозиторий); после первого деплоя — shift-diary в ссылке [live]. Все ссылки-плейсхолдеры собраны в конце файла. -->
 
 [![CI][ci-badge]][ci] [![Deploy][deploy-badge]][deploy]
 
@@ -9,7 +8,7 @@
 Веб-приложение и API, которые превращают поездки водителя в сводку заработка за день: выручка, комиссия, «на руки», наличные/карта. Повторная отправка той же поездки не создаёт дубль.
 
 - **Демо:** [`https://shift-diary.shift-diary.workers.dev`][live] (Cloudflare Workers + D1)
-- **Видео (52 с):** [MP4 1080×1920][video] · [MP4 1920×1080][video-wide], прикреплены к последнему релизу <!-- TODO(Kair): файлы появятся после публикации релиза v1.0.0 (release-video.yml) -->
+- **Видео (52 с):** [MP4 1080×1920][video] · [MP4 1920×1080][video-wide], прикреплены к последнему релизу
 - **Журнал ИИ:** [`docs/AI_LOG.md`](docs/AI_LOG.md): где ИИ ошибся, как это поймали, каким коммитом исправили
 
 [![Демо: 10 секунд из видео — сводка дня, переключение дней, добавление поездки, «Под капотом»](docs/demo.gif)][video]
@@ -309,7 +308,7 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
 ## Ограничения
 
 - **Вне рамок по спеке:** авторизация, несколько водителей, офлайн-синхронизация записей, редактирование и удаление поездок, нативные приложения.
-- **Прод развёрнут вручную (2026-10-09).** `wrangler deploy` с версией `manual-1`; `/api/health` отвечает, сводка за 2026-10-01 верная (2 / 3 900 / 585 / 3 315 / 1 500 / 2 400), smoke-тест против прода: 5 passed. Автоматический деплой из GitHub Actions (`deploy.yml`) на GitHub ещё не запускался. Разовая настройка, уже выполненная (шаги из шапки `.github/workflows/deploy.yml`):
+- **Прод развёрнут (2026-10-09).** Первый деплой выполнен вручную (`wrangler deploy`, версия `manual-1`), затем автоматически из GitHub Actions: после мержа PR #4 в `main` воркфлоу `deploy.yml` выполнил миграции D1, `wrangler deploy`, дождался нового `commit` в `/api/health` и прогнал smoke-тест против прода (5 passed). Сводка за 2026-10-01 на проде верная (2 / 3 900 / 585 / 3 315 / 1 500 / 2 400). Разовая настройка, уже выполненная (шаги из шапки `.github/workflows/deploy.yml`; токену Cloudflare нужны права «Edit Cloudflare Workers» **и** «Account → D1 → Edit»):
   1. Создать базу D1: `pnpm exec wrangler d1 create shift-diary`.
   2. Вписать выданный `database_id` в `wrangler.jsonc` вместо `REPLACE_WITH_D1_ID` и закоммитить.
   3. GitHub → Settings → Secrets and variables → Actions → **Secrets**: `CLOUDFLARE_API_TOKEN` (права «Edit Cloudflare Workers» и «D1:Edit») и `CLOUDFLARE_ACCOUNT_ID`.
@@ -318,7 +317,7 @@ Dockerfile, docker-compose.yml, wrangler.jsonc
   После этого каждый push в `main` выполняет: миграции D1 → `wrangler deploy` → ожидание нужного `commit` в `/api/health` → smoke-тест против прода.
 - **Видео к релизу.** `release-video.yml` рендерит MP4 и прикрепляет к опубликованному релизу. Сначала замените плейсхолдеры `LIVE_URL` / `REPO_URL` в `video/src/config.ts`: иначе воркфлоу остановится. Локально видео рендерится командами `pnpm build && pnpm demo:record && pnpm video:render`.
 - **Docker-образ** собирался и проверялся локально (Colima): нативно на arm64 (`compose up --wait` → healthy, сводка, e2e против контейнера 47 passed / 3 skipped, данные сохраняются в volume, процесс работает не от root) и для amd64 через `docker buildx --platform linux/amd64`. После финального раунда исправлений (corepack закреплён на 0.36.0) образ снова собран с нуля и запущен (arm64): healthy, сводка за 2026-10-01 верна, `/api/nope` → JSON 404, e2e Desktop против контейнера 31 passed. Задание `docker` в CI на GitHub ещё не запускалось: репозиторий пока не опубликован.
-- **Воркфлоу GitHub Actions** (`ci.yml`, `deploy.yml`, `release-video.yml`) написаны, но на GitHub ещё не запускались.
+- **Воркфлоу GitHub Actions** отработали на GitHub: `ci.yml` (в т. ч. джобы `docker` и `e2e` на PR #4), `deploy.yml` (деплой из `main` с smoke-тестом против прода; первый прогон упал на миграциях из-за прав токена, после добавления D1:Edit перезапуск прошёл) и `release-video.yml` (релиз `v1.0.0`, оба MP4 прикреплены).
 - **Не сделано из спеки: ревью PR через Claude GitHub Action** (§2, §10). Нужен ваш ключ API, поэтому воркфлоу не добавлен. Разовая настройка:
   1. В Claude Code выполнить `/install-github-app` (или вручную установить GitHub App Claude на репозиторий).
   2. GitHub → Settings → Secrets and variables → Actions → **Secrets**: `ANTHROPIC_API_KEY`.
