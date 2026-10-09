@@ -1,0 +1,9 @@
+{
+  // The Worker bundle in a Workers-only type environment: no Node globals, so any accidental
+  // Node API use in code reachable from worker.ts fails typecheck.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src/worker.ts"]
+}
